@@ -1,5 +1,12 @@
-pub fn add(left: usize, right: usize) -> usize {
-    left + right
+mod internal;
+
+#[derive(Debug)]
+pub struct ICS {
+
+}
+
+impl ICS {
+    
 }
 
 #[cfg(test)]
