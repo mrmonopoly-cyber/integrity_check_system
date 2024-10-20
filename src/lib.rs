@@ -18,6 +18,7 @@ pub struct ErrorMessage{
 pub struct ICS<T : BusComumication<ErrorMessage>> {
     node_id: u8,
     internal_check: Vec<InternalCheck>,
+    #[allow(dead_code)]
     external_check: Vec<ExternalCheck<ErrorMessage,T>>,
     bus:T,
 }
