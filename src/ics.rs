@@ -14,7 +14,6 @@ pub enum ErrorType {
 pub struct ICSError<'a>{
     e_type: ErrorType,
     e_desc: &'a String,
-    e_id: usize,
 }
 
 #[allow(unused)]
@@ -50,7 +49,6 @@ impl<'a,M> ICS<'a,M> {
                     let err = ICSError{
                         e_type: ErrorType::INTERNAL,
                         e_desc: int_check.get_description(),
-                        e_id: *err_i,
                     };
 
                     *err_cel = Some(err);
@@ -70,7 +68,6 @@ impl<'a,M> ICS<'a,M> {
                     let err = ICSError{
                         e_type: ErrorType::EXTERNAL,
                         e_desc: ext_check.get_description(),
-                        e_id: *err_i,
                     };
 
                     *err_cel = Some(err);
@@ -92,7 +89,6 @@ impl<'a,M> ICS<'a,M> {
                     let err = ICSError{
                         e_type: ErrorType::EXTERNAL,
                         e_desc: ext_check.get_description(),
-                        e_id: *ch_index,
                     };
 
                     *err_cel = Some(err);
