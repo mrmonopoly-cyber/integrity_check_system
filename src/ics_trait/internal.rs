@@ -18,6 +18,7 @@ impl GenericCheck  for InternalCheck{
     }
 }
 
+#[allow(unused)]
 impl InternalCheck{
     pub fn new(description: String, check: CheckFn, 
         manage_fail: ErrFn, reset_fail: ErrFn) -> Self{

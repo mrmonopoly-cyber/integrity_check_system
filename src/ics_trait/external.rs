@@ -1,13 +1,15 @@
 use super::generic_check::{GenericCheck,ErrFn,ErrStatus};
 
-pub type CheckFn<M> = fn(M) -> ErrStatus;
+type CheckFn<M> = fn(&M) -> bool;
 
+#[allow(unused)]
 #[derive(Debug)]
-struct ExternalCheck<M> {
+pub struct ExternalCheck<M> {
     description: String,
     check_mex_fn: CheckFn<M>,
     manage_fail: ErrFn,
     reset_fail: ErrFn,
+    status: ErrStatus,
 }
 
 impl<M> GenericCheck for ExternalCheck<M>{
@@ -16,15 +18,27 @@ impl<M> GenericCheck for ExternalCheck<M>{
     }
 }
 
+#[allow(unused)]
 impl<M> ExternalCheck<M> {
-    fn new(description: String, check_mex_fn: CheckFn<M>, 
+    pub fn new(description: String, check_mex_fn: CheckFn<M>, 
         manage_fail: ErrFn, reset_fail: ErrFn) -> Self{
-        Self{description,check_mex_fn,manage_fail,reset_fail}
+        Self{description,check_mex_fn,manage_fail,reset_fail,status: ErrStatus::OK}
     }
 
-    fn check_mex(&self, mex: M) -> ErrStatus
+    pub fn check_mex(&self, mex: &M) -> ErrStatus
     {
-        (self.check_mex_fn)(mex)
+        match ((self.check_mex_fn)(mex),&self.status){
+            (true,ErrStatus::OK) => ErrStatus::OK,
+            (true,ErrStatus::ERR) => {
+                (self.reset_fail)();
+                ErrStatus::OK
+            },
+            (false,ErrStatus::OK) => ErrStatus::OK,
+            (false,ErrStatus::ERR) => {
+                (self.manage_fail)();
+                ErrStatus::ERR
+            },
+        }
     }
     
 }
