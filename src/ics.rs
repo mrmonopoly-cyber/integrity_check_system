@@ -25,11 +25,17 @@ pub struct ICS<'a,M>{
 
 #[allow(unused)]
 impl<'a,M> ICS<'a,M> {
-    pub fn add_internal_check(&mut self, check: InternalCheck) -> usize{
+    pub fn new(int_err_cap: usize, ext_err_cap: usize, error_cap: usize) -> Self {
+        let ev = Vec::with_capacity(error_cap);
+        let ie = Vec::with_capacity(int_err_cap);
+        let ee = Vec::with_capacity(ext_err_cap);
+        Self {int_vec: ie,ext_vec: ee, err_vec: ev}
+    }
+
+    pub fn add_internal_check(&mut self, check: InternalCheck){
         let l = self.err_vec.len();
         self.int_vec.push((l,check));
-        self.err_vec.push(None);
-        l
+        self.err_vec.push(None)
     }
 
     pub fn add_external_check(&mut self, check: ExternalCheck<M>) -> usize{
