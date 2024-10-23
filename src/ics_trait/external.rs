@@ -1,43 +1,52 @@
 use super::generic_check::{GenericCheck,ErrFn,ErrStatus};
+use super::ics_mex::{ICSMex,Integer};
 
-type CheckFn<M> = fn(&M) -> bool;
 
 #[allow(unused)]
 #[derive(Debug)]
-pub struct ExternalCheck<M> {
+pub struct ICSDep<IS,PS,const S: usize> 
+where IS: Integer,
+      PS: Integer,{
     description: String,
-    check_mex_fn: CheckFn<M>,
+    id: IS,
+    part: PS,
+    error_idx: Option<usize>,
     manage_fail: ErrFn,
     reset_fail: ErrFn,
     status: ErrStatus,
 }
 
-impl<M> GenericCheck for ExternalCheck<M>{
+impl<IS,PS,const S :usize> GenericCheck for ICSDep<IS,PS,S>
+where IS: Integer,
+      PS: Integer,{
     fn get_description(&self) -> &String {
         &self.description
     }
 }
 
 #[allow(unused)]
-impl<M> ExternalCheck<M> {
-    pub fn new(description: String, check_mex_fn: CheckFn<M>, 
-        manage_fail: ErrFn, reset_fail: ErrFn) -> Self{
-        Self{description,check_mex_fn,manage_fail,reset_fail,status: ErrStatus::OK}
-    }
-
-    pub fn check_mex(&self, mex: &M) -> ErrStatus
+impl<IS,PS,const S:usize> ICSDep<IS,PS,S>
+where IS: Integer,
+      PS: Integer,{
+    pub fn check_mex(&mut self, mex: &ICSMex<IS,PS,S>) -> ErrStatus
     {
-        match ((self.check_mex_fn)(mex),&self.status){
-            (true,ErrStatus::OK) => ErrStatus::OK,
-            (true,ErrStatus::ERR) => {
-                (self.reset_fail)();
-                ErrStatus::OK
-            },
-            (false,ErrStatus::OK) => ErrStatus::OK,
-            (false,ErrStatus::ERR) => {
-                (self.manage_fail)();
-                ErrStatus::ERR
-            },
+        if  mex.same_id_part(self.id, self.part) {
+            match (mex.check_err(self.error_idx),&self.status){
+                (true, ErrStatus::OK) => {
+                    (self.manage_fail)();
+                    self.status = ErrStatus::ERR;
+                    ErrStatus::ERR
+                },
+                (true, ErrStatus::ERR) =>ErrStatus::ERR,
+                (false, ErrStatus::OK) => ErrStatus::OK,
+                (false, ErrStatus::ERR) => {
+                    (self.reset_fail)();
+                    self.status = ErrStatus::OK;
+                    ErrStatus::OK
+                },
+            }
+        }else{
+            ErrStatus::OK
         }
     }
     

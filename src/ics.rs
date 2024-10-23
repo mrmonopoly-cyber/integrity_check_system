@@ -1,7 +1,9 @@
 use super::ics_trait::generic_check::ErrStatus;
 use super::ics_trait::internal::*;
 use super::ics_trait::generic_check::GenericCheck;
-use super::ics_trait::external::ExternalCheck;
+use super::ics_trait::external::ICSDep;
+use super::ics_trait::ics_mex::ICSMex;
+use super::ics_trait::ics_mex::Integer;
 
 #[derive(Debug,Clone)]
 pub enum ErrorType {
@@ -17,28 +19,41 @@ pub struct ICSError<'a>{
 }
 
 #[allow(unused)]
-pub struct ICS<'a,M>{
+pub struct ICS<'a,IS,PS,const S:usize>
+where IS: Integer,
+      PS: Integer,{
     int_vec: Vec<(usize,InternalCheck)>,
-    ext_vec: Vec<(usize,ExternalCheck<M>)>,
+    ext_vec: Vec<(usize,ICSDep<IS,PS,S>)>,
     err_vec: Vec<Option<ICSError<'a>>>,
+    id: usize,
+    ps: usize,
 }
 
 #[allow(unused)]
-impl<'a,M> ICS<'a,M> {
-    pub fn new() -> Self {
+impl<'a,IS,PS,const S: usize> ICS<'a,IS,PS,S> 
+where IS: Integer,
+      PS: Integer,{
+    pub fn new(id:usize, parts: usize) -> Self {
         
         Self {
             int_vec: Vec::new(),
             ext_vec: Vec::new(),
             err_vec: Vec::new(),
+            id,
+            ps: parts
         }
     }
 
-    pub fn with_capacity(int_err_cap: usize, ext_err_cap: usize, error_cap: usize) -> Self {
+    pub fn with_capacity(
+        int_err_cap: usize, 
+        ext_err_cap: usize, 
+        error_cap: usize, 
+        id:usize, 
+        parts: usize) -> Self {
         let ev = Vec::with_capacity(error_cap);
         let ie = Vec::with_capacity(int_err_cap);
         let ee = Vec::with_capacity(ext_err_cap);
-        Self {int_vec: ie,ext_vec: ee, err_vec: ev}
+        Self {int_vec: ie,ext_vec: ee, err_vec: ev,id, ps: parts}
     }
 
     pub fn add_internal_check(&mut self, check: InternalCheck){
@@ -47,7 +62,7 @@ impl<'a,M> ICS<'a,M> {
         self.err_vec.push(None)
     }
 
-    pub fn add_external_check(&mut self, check: ExternalCheck<M>) -> usize{
+    pub fn add_external_check(&mut self, check: ICSDep<IS,PS,S>) -> usize{
         let l = self.err_vec.len();
         self.ext_vec.push((l,check));
         self.err_vec.push(None);
@@ -73,31 +88,13 @@ impl<'a,M> ICS<'a,M> {
         }
     }
 
-    fn check_generic_mex(&'a mut self,mex: M){
-        for ext_check in &mut self.ext_vec{
-            let (err_i,ext_check) = ext_check;
-            let mut err_cel = &mut self.err_vec[*err_i];
-            match ext_check.check_mex(&mex) {
-                ErrStatus::ERR => 
-                {
-                    let err = ICSError{
-                        e_type: ErrorType::EXTERNAL,
-                        e_desc: ext_check.get_description(),
-                    };
 
-                    *err_cel = Some(err);
-                },
-                _ => *err_cel = None,
-            }
-        }
-    }
-
-    pub fn check_specific_mex(&'a mut self,mex: &M, ext_err_index: usize){
+    pub fn check_specific_mex(&'a mut self,mex: &ICSMex<IS,PS,S>, ext_err_index: usize){
         if ext_err_index >= self.ext_vec.len() {
             ()
         }
 
-        let (ch_index,ext_check) = &self.ext_vec[ext_err_index];
+        let (ch_index,ext_check) = &mut self.ext_vec[ext_err_index];
         let mut err_cel = &mut self.err_vec[*ch_index];
         match ext_check.check_mex(mex) {
             ErrStatus::ERR=> {
@@ -113,8 +110,36 @@ impl<'a,M> ICS<'a,M> {
         }
     }
 
-    pub fn errors(&self) -> Vec<Option<ICSError>>{
-        self.err_vec.clone()
+    pub fn get_err_info(&self,err_type: ErrorType, err_index: usize) -> Option<&String> {
+        fn get_dscr<'a,G: GenericCheck>(vc : &'a Vec<(usize,G)>, idx: usize) -> Option<&'a String>{
+                if idx < vc.len(){
+                    let (_,err) = &vc[idx];
+                    Some(err.get_description())
+                }else{
+                    None
+                }
+        }
+        match err_type {
+            ErrorType::INTERNAL => get_dscr(&self.int_vec, err_index),
+            ErrorType::EXTERNAL => get_dscr(&self.ext_vec, err_index),
+        }
+    }
+
+    pub fn create_ics_messages(&self) -> Box<[ICSMex<IS,PS,S>]>{
+        let num_mex = {
+            match (self.err_vec.len()/S, self.err_vec.len()%S){
+                (i,0) => i,
+                (i,_) => i +1
+            }
+        };
+        let mut res = Vec::with_capacity(num_mex);
+        for i in 0..num_mex{
+            let mex: ICSMex<IS,PS,S> = ICSMex::new(IS::from(self.id), PS::from(self.ps));
+            //TODO: to finish, insert the bit in all the cell of the error vector for each message
+            res.push(mex);
+        }
+
+        res.into_boxed_slice()
     }
 }
 

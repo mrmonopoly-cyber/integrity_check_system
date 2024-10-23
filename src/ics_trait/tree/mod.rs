@@ -1,17 +1,26 @@
-mod graph;
-
 #[allow(unused)]
-pub type Tree = graph::SquareGraphMatx;
+#[derive(Debug)]
+struct Node<D>
+where D: Eq{
+    data: D,
+    lchild: Option<usize>,
+    rchild: Option<usize>,
 
-#[allow(unused)]
-impl Tree{
-    pub fn add_child(&mut self, parent_node: usize) {
-        if self.node_exist(parent_node) {
-            let node_i = self.add_node();
-        }
-    }
 }
 
+#[allow(unused)]
+#[derive(Debug)]
+struct BTree<D> 
+where D: Eq{
+    nodes: Vec<Node<D>>, 
+    root : usize,
+}
+
+
+#[allow(unused)]
+impl<M> BTree<M>
+where M:Eq{
+}
 
 #[cfg(test)]
 mod test{
