@@ -25,7 +25,16 @@ pub struct ICS<'a,M>{
 
 #[allow(unused)]
 impl<'a,M> ICS<'a,M> {
-    pub fn new(int_err_cap: usize, ext_err_cap: usize, error_cap: usize) -> Self {
+    pub fn new() -> Self {
+        
+        Self {
+            int_vec: Vec::new(),
+            ext_vec: Vec::new(),
+            err_vec: Vec::new(),
+        }
+    }
+
+    pub fn with_capacity(int_err_cap: usize, ext_err_cap: usize, error_cap: usize) -> Self {
         let ev = Vec::with_capacity(error_cap);
         let ie = Vec::with_capacity(int_err_cap);
         let ee = Vec::with_capacity(ext_err_cap);
