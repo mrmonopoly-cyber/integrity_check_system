@@ -19,10 +19,12 @@ pub struct ICSError<'a>{
 }
 
 #[allow(unused)]
-pub struct ICS<'a,IS,PS,const S:usize>
+pub struct ICS<'a,IS,PS,F,const S:usize>
 where IS: Integer,
-      PS: Integer,{
-    int_vec: Vec<(usize,InternalCheck)>,
+      PS: Integer,
+      F: FnMut(OpAct) -> bool,
+{
+    int_vec: Vec<(usize,InternalCheck<F>)>,
     ext_vec: Vec<(usize,ICSDep<IS,PS,S>)>,
     err_vec: Vec<Option<ICSError<'a>>>,
     id: usize,
@@ -30,9 +32,11 @@ where IS: Integer,
 }
 
 #[allow(unused)]
-impl<'a,IS,PS,const S: usize> ICS<'a,IS,PS,S> 
+impl<'a,IS,PS,F,const S: usize> ICS<'a,IS,PS,F,S> 
 where IS: Integer,
-      PS: Integer,{
+      PS: Integer,
+      F : FnMut(OpAct) -> bool,
+{
     pub fn new(id:usize, parts: usize) -> Self {
         
         Self {
@@ -56,7 +60,7 @@ where IS: Integer,
         Self {int_vec: ie,ext_vec: ee, err_vec: ev,id, ps: parts}
     }
 
-    pub fn add_internal_check(&mut self, check: InternalCheck){
+    pub fn add_internal_check(&mut self, check: InternalCheck<F>){
         let l = self.err_vec.len();
         self.int_vec.push((l,check));
         self.err_vec.push(None)
@@ -134,8 +138,17 @@ where IS: Integer,
         };
         let mut res = Vec::with_capacity(num_mex);
         for i in 0..num_mex{
-            let mex: ICSMex<IS,PS,S> = ICSMex::new(IS::from(self.id), PS::from(self.ps));
-            //TODO: to finish, insert the bit in all the cell of the error vector for each message
+            let mut mex: ICSMex<IS,PS,S> = ICSMex::new(IS::from(self.id), PS::from(self.ps));
+            let mut err_value : u8 = 0;
+            for j in 0..8{
+                match self.err_vec[(i*8) + j] {
+                    None => (),
+                    Some(_) => {
+                        err_value |= (1 << j) ;
+                    },
+                };
+            }
+            mex.set_err(i, err_value);
             res.push(mex);
         }
 

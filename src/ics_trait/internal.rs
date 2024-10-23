@@ -1,36 +1,41 @@
-use crate::ics_trait::generic_check::{ErrStatus,ErrFn,GenericCheck};
+use crate::ics_trait::generic_check::{ErrStatus,GenericCheck};
 
-pub type CheckFn = fn() -> bool;
+#[derive(Debug)]
+pub enum OpAct{
+    CHECK,
+    FAIL,
+    RESTORE,
+}
 
 #[allow(unused)]
-pub struct InternalCheck{
+pub struct InternalCheck<F>
+where F: FnMut(OpAct) -> bool,{
     description: String,
-    check :CheckFn,
-    manage_fail: ErrFn,
-    reset_fail: ErrFn,
+    check :F,
     status: ErrStatus,
 }
 
 #[allow(unused)]
-impl GenericCheck  for InternalCheck{
+impl<F> GenericCheck  for InternalCheck<F>
+where F: FnMut(OpAct) -> bool,{
     fn get_description(&self) -> &String{
         &self.description
     }
 }
 
 #[allow(unused)]
-impl InternalCheck{
-    pub fn new(description: String, check: CheckFn, 
-        manage_fail: ErrFn, reset_fail: ErrFn) -> Self{
-        Self{description,check,manage_fail,reset_fail,status:ErrStatus::OK}
+impl<F> InternalCheck<F>
+where F: FnMut(OpAct) -> bool{
+    pub fn new(description: String, check: F) -> Self{
+        Self{description,check,status:ErrStatus::OK}
     }
 
     pub fn run_check(&mut self) -> ErrStatus
     {
-        match ((self.check)(),&self.status){
+        match ((self.check)(OpAct::CHECK),&self.status){
             (true,ErrStatus::OK) =>{
                 self.status = ErrStatus::ERR;
-                (self.manage_fail)();
+                (self.check)(OpAct::FAIL);
                 ErrStatus::ERR
             },
             (true,ErrStatus::ERR) =>{
@@ -38,7 +43,7 @@ impl InternalCheck{
             },
             (false,ErrStatus::ERR) =>{
                 self.status = ErrStatus::OK;
-                (self.reset_fail)();
+                (self.check)(OpAct::RESTORE);
                 ErrStatus::OK
             },
             (false,ErrStatus::OK) =>{
@@ -48,3 +53,34 @@ impl InternalCheck{
     }
 }
 
+#[cfg(test)]
+mod test{
+    use crate::ics_trait::generic_check::ErrStatus;
+
+    use super::InternalCheck;
+    use super::OpAct;
+
+    #[test]
+    fn create_internal_check(){
+        let mut check_var = 10;
+        let check_f = |act : OpAct | -> bool {
+            match act {
+                OpAct::CHECK => check_var < 10,
+                OpAct::FAIL => {
+                    check_var = 99; 
+                    true
+                },
+                OpAct::RESTORE =>{
+                    check_var = 10;
+                    true
+                },
+            }
+        };
+        let str = String::from("test init");
+
+        let mut int_check = InternalCheck::new(str, check_f);
+        
+        assert_eq!(int_check.run_check(),ErrStatus::OK);
+
+    }
+}

@@ -52,3 +52,6 @@ where IS: Integer,
     
 }
 
+#[cfg(test)]
+mod test{
+}

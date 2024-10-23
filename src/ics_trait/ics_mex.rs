@@ -44,3 +44,7 @@ where IS: Integer,
         self.err_vec[idx] = value;
     }
 }
+
+#[cfg(test)]
+mod test{
+}
