@@ -33,20 +33,20 @@ where F: FnMut(OpAct) -> bool{
     pub fn run_check(&mut self) -> ErrStatus
     {
         match ((self.check)(OpAct::CHECK),&self.status){
-            (true,ErrStatus::OK) =>{
+            (false,ErrStatus::OK) =>{
                 self.status = ErrStatus::ERR;
                 (self.check)(OpAct::FAIL);
                 ErrStatus::ERR
             },
-            (true,ErrStatus::ERR) =>{
+            (false,ErrStatus::ERR) =>{
                 ErrStatus::ERR
             },
-            (false,ErrStatus::ERR) =>{
+            (true,ErrStatus::ERR) =>{
                 self.status = ErrStatus::OK;
                 (self.check)(OpAct::RESTORE);
                 ErrStatus::OK
             },
-            (false,ErrStatus::OK) =>{
+            (true,ErrStatus::OK) =>{
                 ErrStatus::OK
             },
         }
@@ -55,32 +55,54 @@ where F: FnMut(OpAct) -> bool{
 
 #[cfg(test)]
 mod test{
-    use crate::ics_trait::generic_check::ErrStatus;
+    use core::sync::atomic;
 
     use super::InternalCheck;
     use super::OpAct;
 
-    #[test]
-    fn create_internal_check(){
-        let mut check_var = 10;
-        let check_f = |act : OpAct | -> bool {
-            match act {
-                OpAct::CHECK => check_var < 10,
-                OpAct::FAIL => {
-                    check_var = 99; 
-                    true
-                },
-                OpAct::RESTORE =>{
-                    check_var = 10;
-                    true
-                },
-            }
-        };
-        let str = String::from("test init");
+    fn check_fun(act: OpAct, var: &atomic::AtomicUsize) -> bool{
+        match act {
+            OpAct::CHECK => {
+                var.load(atomic::Ordering::Relaxed) < 10
+            },
+            OpAct::FAIL => {
+                var.store(99, atomic::Ordering::Relaxed);
+                true
+            },
+            OpAct::RESTORE =>{
+                var.store(9, atomic::Ordering::Relaxed);
+                true
+            },
+        }
+    }
 
+    fn run_test(check_seq: &[(usize,usize)]){
+        let check_var = core::sync::atomic::AtomicUsize::new(0);
+        let str = String::from("a");
+        let check_f = |act : OpAct | -> bool {check_fun(act, &check_var)};
         let mut int_check = InternalCheck::new(str, check_f);
-        
-        assert_eq!(int_check.run_check(),ErrStatus::OK);
+        for (i,d) in check_seq.iter(){
+            check_var.store(*i, atomic::Ordering::Relaxed);
+            int_check.run_check();
+            assert_eq!(check_var.load(atomic::Ordering::Relaxed),*d);
+        }
+    }
 
+    #[test]
+    fn valid_check_var(){
+        let tv = [(9,9)];
+        run_test(&tv);
+    }
+
+    #[test]
+    fn invalid_check_var(){
+        let tv = [(11,99)];
+        run_test(&tv);
+    }
+
+    #[test]
+    fn valid_restore(){
+        let tv = [(11,99),(7,9),(2,2)];
+        run_test(&tv);
     }
 }
