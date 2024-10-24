@@ -1,3 +1,5 @@
+use bit_ops::BitOps;
+
 use super::ics_trait::generic_check::ErrStatus;
 use super::ics_trait::internal::*;
 use super::ics_trait::generic_check::GenericCheck;
@@ -144,11 +146,11 @@ where IS: Integer,
         for i in 0..num_mex{
             let mut mex: ICSMex<IS,PS,S> = ICSMex::new(IS::from(self.id), PS::from(self.ps));
             let mut err_value : u8 = 0;
-            for j in 0..8{
-                match self.err_vec[(i*8) + j] {
+            for j in 0_u8..8_u8{
+                match self.err_vec[(i*8)+ usize::from(j)] {
                     None => (),
                     Some(_) => {
-                        err_value |= (1 << j) ;
+                        err_value = err_value.set_bit(j);
                     },
                 };
             }
