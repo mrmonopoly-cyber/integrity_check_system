@@ -57,8 +57,12 @@ where F: FnMut(OpAct) -> bool{
 mod test{
     use core::sync::atomic;
 
+    use crate::ics_trait::generic_check::GenericCheck;
+
     use super::InternalCheck;
     use super::OpAct;
+
+    static STR: &str= "internal_check_test";
 
     fn check_fun(act: OpAct, var: &atomic::AtomicUsize) -> bool{
         match act {
@@ -78,7 +82,7 @@ mod test{
 
     fn run_test(check_seq: &[(usize,usize)]){
         let check_var = core::sync::atomic::AtomicUsize::new(0);
-        let str = String::from("a");
+        let str = STR.to_string();
         let check_f = |act : OpAct | -> bool {check_fun(act, &check_var)};
         let mut int_check = InternalCheck::new(str, check_f);
         for (i,d) in check_seq.iter(){
@@ -104,5 +108,13 @@ mod test{
     fn valid_restore(){
         let tv = [(11,99),(7,9),(2,2)];
         run_test(&tv);
+    }
+
+    #[test]
+    fn valid_description(){
+        let v= atomic::AtomicUsize::new(1);
+        let check_f = |act : OpAct | -> bool {check_fun(act, &v)};
+        let d = InternalCheck::new(STR.to_string(), check_f);
+        assert_eq!(d.get_description(),STR);
     }
 }
