@@ -1,21 +1,16 @@
-pub trait Integer:  Copy + PartialEq + PartialOrd + 
-                    From<u8> + From<u16> + From<u32> + From<u64> + From<usize>  {}
+use bit_ops::BitOps;
 
 #[derive(Debug)]
-pub struct ICSMex<IS,PS,const S: usize>
-where IS: Integer,
-      PS: Integer,
+pub struct ICSMex<const S: usize>
 {
-    id: IS,
-    part: PS,
+    id: usize,
+    part: usize,
     err_vec: [u8;S],
 }
 
-impl<IS,PS,const S:usize> ICSMex<IS,PS,S>
-where IS: Integer,
-      PS: Integer,
+impl<const S:usize> ICSMex<S>
 {
-    pub fn new(id: IS,part: PS) -> Self {
+    pub fn new(id: usize,part: usize) -> Self {
         Self{id,part,err_vec: [0;S]}
     }
 
@@ -35,16 +30,26 @@ where IS: Integer,
         }
     }
 
-    pub fn same_id_part(&self,id: IS , part: PS) -> bool {
+    pub fn same_id_part(&self,id: usize, part: usize) -> bool {
         self.id == id && self.part == part
     }
 
-    pub fn set_err(&mut self, idx:usize, value: u8){
-        if idx > 8 {}
-        self.err_vec[idx] = value;
+    pub fn set_err(&mut self, idx:usize, bit: u8){
+        if idx < 8 {
+            self.err_vec[idx] = self.err_vec[idx].set_bit(bit);
+        }
     }
 }
 
 #[cfg(test)]
 mod test{
+    use super::ICSMex;
+
+    #[test]
+    fn check_err() {
+        let mut err : ICSMex<13> = ICSMex::new(12, 1);
+        err.set_err(0, 0);
+        err.set_err(0, 1);
+        assert_eq!(err.err_vec[0],3);
+    }
 }

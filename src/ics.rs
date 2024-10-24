@@ -1,11 +1,8 @@
-use bit_ops::BitOps;
-
 use super::ics_trait::generic_check::ErrStatus;
 use super::ics_trait::internal::*;
 use super::ics_trait::generic_check::GenericCheck;
 use super::ics_trait::external::ICSDep;
 use super::ics_trait::ics_mex::ICSMex;
-use super::ics_trait::ics_mex::Integer;
 
 #[derive(Debug,Clone)]
 pub enum ErrorType {
@@ -21,25 +18,21 @@ pub struct ICSError<'a>{
 }
 
 #[allow(unused)]
-pub struct ICS<'a,IS,PS,FC,FF,FR,const S:usize>
-where IS: Integer,
-      PS: Integer,
-      FC: FnMut() -> bool,
+pub struct ICS<'a,FC,FF,FR,const S:usize>
+where FC: FnMut() -> bool,
       FF: FnMut() -> (),
       FR: FnMut() -> (),
 {
     int_vec: Vec<(usize,InternalCheck<FC,FF,FR>)>,
-    ext_vec: Vec<(usize,ICSDep<IS,PS,S>)>,
+    ext_vec: Vec<(usize,ICSDep<S>)>,
     err_vec: Vec<Option<ICSError<'a>>>,
     id: usize,
     ps: usize,
 }
 
 #[allow(unused)]
-impl<'a,IS,PS,FC,FF,FR,const S: usize> ICS<'a,IS,PS,FC,FF,FR,S> 
-where IS: Integer,
-      PS: Integer,
-      FC : FnMut() -> bool,
+impl<'a,FC,FF,FR,const S: usize> ICS<'a,FC,FF,FR,S> 
+where FC : FnMut() -> bool,
       FF : FnMut() -> (),
       FR : FnMut() -> (),
 {
@@ -72,7 +65,7 @@ where IS: Integer,
         self.err_vec.push(None)
     }
 
-    pub fn add_external_check(&mut self, check: ICSDep<IS,PS,S>) -> usize{
+    pub fn add_external_check(&mut self, check: ICSDep<S>) -> usize{
         let l = self.err_vec.len();
         self.ext_vec.push((l,check));
         self.err_vec.push(None);
@@ -99,7 +92,7 @@ where IS: Integer,
     }
 
 
-    pub fn check_specific_mex(&'a mut self,mex: &ICSMex<IS,PS,S>, ext_err_index: usize){
+    pub fn check_specific_mex(&'a mut self,mex: &ICSMex<S>, ext_err_index: usize){
         if ext_err_index >= self.ext_vec.len() {
             ()
         }
@@ -135,7 +128,7 @@ where IS: Integer,
         }
     }
 
-    pub fn create_ics_messages(&self) -> Box<[ICSMex<IS,PS,S>]>{
+    pub fn create_ics_messages(&self) -> Box<[ICSMex<S>]>{
         let num_mex = {
             match (self.err_vec.len()/S, self.err_vec.len()%S){
                 (i,0) => i,
@@ -144,17 +137,15 @@ where IS: Integer,
         };
         let mut res = Vec::with_capacity(num_mex);
         for i in 0..num_mex{
-            let mut mex: ICSMex<IS,PS,S> = ICSMex::new(IS::from(self.id), PS::from(self.ps));
-            let mut err_value : u8 = 0;
+            let mut mex: ICSMex<S> = ICSMex::new(self.id, self.ps);
             for j in 0_u8..8_u8{
                 match self.err_vec[(i*8)+ usize::from(j)] {
                     None => (),
                     Some(_) => {
-                        err_value = err_value.set_bit(j);
+                        mex.set_err(i, j);
                     },
                 };
             }
-            mex.set_err(i, err_value);
             res.push(mex);
         }
 
