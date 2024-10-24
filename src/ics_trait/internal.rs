@@ -1,41 +1,43 @@
 use crate::ics_trait::generic_check::{ErrStatus,GenericCheck};
 
-#[derive(Debug)]
-pub enum OpAct{
-    CHECK,
-    FAIL,
-    RESTORE,
-}
-
 #[allow(unused)]
-pub struct InternalCheck<F>
-where F: FnMut(OpAct) -> bool,{
+pub struct InternalCheck<FC,FF,FR> where
+    FC: FnMut() -> bool,
+    FF: FnMut() -> (),
+    FR: FnMut() -> (),
+      {
     description: String,
-    check :F,
+    check :FC,
+    fail: FF,
+    restore: FR,
     status: ErrStatus,
 }
 
 #[allow(unused)]
-impl<F> GenericCheck  for InternalCheck<F>
-where F: FnMut(OpAct) -> bool,{
+impl<FC,FF,FR> GenericCheck  for InternalCheck<FC,FF,FR> where
+    FC: FnMut() -> bool,
+    FF: FnMut() -> (),
+    FR: FnMut() -> (),{
     fn get_description(&self) -> &String{
         &self.description
     }
 }
 
 #[allow(unused)]
-impl<F> InternalCheck<F>
-where F: FnMut(OpAct) -> bool{
-    pub fn new(description: String, check: F) -> Self{
-        Self{description,check,status:ErrStatus::OK}
+impl<FC,FF,FR> InternalCheck<FC,FF,FR> where
+FC: FnMut() -> bool,
+FF: FnMut() -> (),
+FR: FnMut() -> (){
+    pub fn new(description: String, check: FC,fail: FF,restore: FR) -> Self{
+        Self{description,check,fail,restore,status:ErrStatus::OK}
     }
 
     pub fn run_check(&mut self) -> ErrStatus
     {
-        match ((self.check)(OpAct::CHECK),&self.status){
+        match ((self.check)(),&self.status){
             (false,ErrStatus::OK) =>{
                 self.status = ErrStatus::ERR;
-                (self.check)(OpAct::FAIL);
+                (self.fail)();
                 ErrStatus::ERR
             },
             (false,ErrStatus::ERR) =>{
@@ -43,7 +45,7 @@ where F: FnMut(OpAct) -> bool{
             },
             (true,ErrStatus::ERR) =>{
                 self.status = ErrStatus::OK;
-                (self.check)(OpAct::RESTORE);
+                (self.restore)();
                 ErrStatus::OK
             },
             (true,ErrStatus::OK) =>{
@@ -57,33 +59,30 @@ where F: FnMut(OpAct) -> bool{
 mod test{
     use core::sync::atomic;
 
-    use super::GenericCheck;
+    use crate::ics_trait::generic_check::GenericCheck;
     use super::InternalCheck;
-    use super::OpAct;
 
     static STR: &str= "internal_check_test";
 
-    fn check_fun(act: OpAct, var: &atomic::AtomicUsize) -> bool{
-        match act {
-            OpAct::CHECK => {
-                var.load(atomic::Ordering::Relaxed) < 10
-            },
-            OpAct::FAIL => {
-                var.store(99, atomic::Ordering::Relaxed);
-                true
-            },
-            OpAct::RESTORE =>{
-                var.store(9, atomic::Ordering::Relaxed);
-                true
-            },
-        }
+    fn check_fun(var: &atomic::AtomicUsize) -> bool{
+        var.load(atomic::Ordering::Relaxed) < 10
+    }
+
+    fn fail_fun(var: &atomic::AtomicUsize){
+        var.store(99, atomic::Ordering::Relaxed)
+    }
+
+    fn rest_fun(var: &atomic::AtomicUsize){
+        var.store(9, atomic::Ordering::Relaxed)
     }
 
     fn run_test(check_seq: &[(usize,usize)]){
         let check_var = core::sync::atomic::AtomicUsize::new(0);
         let str = STR.to_string();
-        let check_f = |act : OpAct | -> bool {check_fun(act, &check_var)};
-        let mut int_check = InternalCheck::new(str, check_f);
+        let check_f = || -> bool {check_fun(&check_var)};
+        let fail_f= || -> () {fail_fun(&check_var)};
+        let rest_f= || -> () {rest_fun(&check_var)};
+        let mut int_check = InternalCheck::new(str, check_f,fail_f,rest_f);
         for (i,d) in check_seq.iter(){
             check_var.store(*i, atomic::Ordering::Relaxed);
             int_check.run_check();
@@ -112,8 +111,11 @@ mod test{
     #[test]
     fn valid_description(){
         let v= atomic::AtomicUsize::new(1);
-        let check_f = |act : OpAct | -> bool {check_fun(act, &v)};
-        let d = InternalCheck::new(STR.to_string(), check_f);
+        let check_f = || -> bool {check_fun(&v)};
+        let fail_f= || -> () {fail_fun(&v)};
+        let rest_f= || -> () {rest_fun(&v)};
+        let d = InternalCheck::new(STR.to_string(), check_f,fail_f,rest_f);
+
         assert_eq!(d.get_description(),STR);
     }
 }

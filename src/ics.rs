@@ -19,12 +19,14 @@ pub struct ICSError<'a>{
 }
 
 #[allow(unused)]
-pub struct ICS<'a,IS,PS,F,const S:usize>
+pub struct ICS<'a,IS,PS,FC,FF,FR,const S:usize>
 where IS: Integer,
       PS: Integer,
-      F: FnMut(OpAct) -> bool,
+      FC: FnMut() -> bool,
+      FF: FnMut() -> (),
+      FR: FnMut() -> (),
 {
-    int_vec: Vec<(usize,InternalCheck<F>)>,
+    int_vec: Vec<(usize,InternalCheck<FC,FF,FR>)>,
     ext_vec: Vec<(usize,ICSDep<IS,PS,S>)>,
     err_vec: Vec<Option<ICSError<'a>>>,
     id: usize,
@@ -32,10 +34,12 @@ where IS: Integer,
 }
 
 #[allow(unused)]
-impl<'a,IS,PS,F,const S: usize> ICS<'a,IS,PS,F,S> 
+impl<'a,IS,PS,FC,FF,FR,const S: usize> ICS<'a,IS,PS,FC,FF,FR,S> 
 where IS: Integer,
       PS: Integer,
-      F : FnMut(OpAct) -> bool,
+      FC : FnMut() -> bool,
+      FF : FnMut() -> (),
+      FR : FnMut() -> (),
 {
     pub fn new(id:usize, parts: usize) -> Self {
         
@@ -60,7 +64,7 @@ where IS: Integer,
         Self {int_vec: ie,ext_vec: ee, err_vec: ev,id, ps: parts}
     }
 
-    pub fn add_internal_check(&mut self, check: InternalCheck<F>){
+    pub fn add_internal_check(&mut self, check: InternalCheck<FC,FF,FR>){
         let l = self.err_vec.len();
         self.int_vec.push((l,check));
         self.err_vec.push(None)
