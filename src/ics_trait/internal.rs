@@ -57,8 +57,7 @@ where F: FnMut(OpAct) -> bool{
 mod test{
     use core::sync::atomic;
 
-    use crate::ics_trait::generic_check::GenericCheck;
-
+    use super::GenericCheck;
     use super::InternalCheck;
     use super::OpAct;
 
