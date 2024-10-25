@@ -1,11 +1,10 @@
-use core::fmt::Result;
-
 use super::ics_trait::internal::*;
 use super::ics_trait::generic_check::GenericCheck;
 use super::ics_trait::external::ICSDep;
 use super::ics_trait::ics_mex::ICSMex;
 use alloc::vec::Vec;
 use alloc::boxed::Box;
+use core::result;
 
 #[derive(Debug,Clone)]
 pub enum ErrorType {
@@ -88,7 +87,7 @@ where FC : FnMut() -> bool,
     }
 
 
-    pub fn check_specific_mex(&mut self,mex: &ICSMex<S>, ext_err_index: usize) -> core::result::Result<(),&str>{
+    pub fn check_specific_mex(&mut self,mex: &ICSMex<S>, ext_err_index: usize) -> result::Result<(),&str>{
         if ext_err_index >= self.ext_vec.len() {
             return Err("invalid index range fir ext_vec")
         }
