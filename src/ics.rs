@@ -144,6 +144,8 @@ where FC : FnMut() -> bool,
 #[allow(unused)]
 #[cfg(test)]
 mod test{
+    use core::sync::atomic;
+
     use internal::InternalCheck;
 
     use crate::ics::ICS;
@@ -151,21 +153,32 @@ mod test{
 
     const MEXSIZE : usize= 8;
 
-    type FC = fn () -> bool;
-    type FF = fn () -> ();
-
     #[test]
     fn create_ics() {
-        let check_func : FC = || true;
-        let on_fail_func : FF = || {};
-        let on_recover_func : FF = || {};
-
-        let mut ic : ICS<FC, FF, FF, MEXSIZE> = ICS::new(12, 3);
+        let mut ic : ICS<fn()-> bool,fn () -> (),fn () ->(), MEXSIZE> = ICS::new(12, 3);
         ic.internal_check();
         let err_mex_arr = ic.create_ics_messages();
 
         for mex in err_mex_arr.iter() {
             assert_eq!(mex.check_err(None),false);
         }
+    }
+
+    #[test]
+    fn locate_internal_fail() {
+        let mut var_to_check = atomic::AtomicI8::new(12);
+        let mut ic : ICS<_, _, _, MEXSIZE> = ICS::new(12, 3);
+        let ck = || var_to_check.load(atomic::Ordering::Relaxed) < 10;
+        let ff = || var_to_check.store(-1, atomic::Ordering::Relaxed);
+        let fr = || var_to_check.store(8,atomic::Ordering::Relaxed);
+        ic.add_internal_check(InternalCheck::new("dummy check", ck, ff, fr));
+        ic.internal_check();
+        let res = ic.create_ics_messages();
+        let mut mex_c = 0;
+        for mex_p in res.iter(){
+            mex_c+=1;
+            assert_eq!(mex_p.check_err(Some(0)),true);
+        }
+        assert_eq!(mex_c,1);
     }
 }
