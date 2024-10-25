@@ -1,4 +1,3 @@
-use super::ics_trait::generic_check::ErrStatus;
 use super::ics_trait::internal::*;
 use super::ics_trait::generic_check::GenericCheck;
 use super::ics_trait::external::ICSDep;
@@ -25,9 +24,8 @@ where FC: FnMut() -> bool,
       FF: FnMut() -> (),
       FR: FnMut() -> (),
 {
-    int_vec: Vec<(usize,InternalCheck<'a,FC,FF,FR>)>,
-    ext_vec: Vec<(usize,ICSDep<'a,S>)>,
-    err_vec: Vec<Option<ICSError<'a>>>,
+    int_vec: Vec<InternalCheck<'a,FC,FF,FR>>,
+    ext_vec: Vec<ICSDep<'a,S>>,
     id: usize,
     ps: usize,
 }
@@ -39,11 +37,9 @@ where FC : FnMut() -> bool,
       FR : FnMut() -> (),
 {
     pub fn new(id:usize, parts: usize) -> Self {
-        
         Self {
             int_vec: Vec::new(),
             ext_vec: Vec::new(),
-            err_vec: Vec::new(),
             id,
             ps: parts
         }
@@ -55,41 +51,31 @@ where FC : FnMut() -> bool,
         error_cap: usize, 
         id:usize, 
         parts: usize) -> Self {
-        let ev = Vec::with_capacity(error_cap);
         let ie = Vec::with_capacity(int_err_cap);
         let ee = Vec::with_capacity(ext_err_cap);
-        Self {int_vec: ie,ext_vec: ee, err_vec: ev,id, ps: parts}
+        Self {int_vec: ie,ext_vec: ee, id, ps: parts}
+    }
+
+    pub fn full_spec(
+        id:usize, parts: usize,
+        int_vec: Vec<InternalCheck<'a,FC,FF,FR>>, ext_vec: Vec<ICSDep<'a,S>>) -> Self{
+        Self{
+            id,ps:parts, int_vec,ext_vec
+        }
     }
 
     pub fn add_internal_check(&mut self, check: InternalCheck<'a,FC,FF,FR>){
-        let l = self.err_vec.len();
-        self.int_vec.push((l,check));
-        self.err_vec.push(None)
+        self.int_vec.push(check);
     }
 
     pub fn add_external_check(&mut self, check: ICSDep<'a,S>) -> usize{
-        let l = self.err_vec.len();
-        self.ext_vec.push((l,check));
-        self.err_vec.push(None);
-        l
+        self.ext_vec.push(check);
+        self.ext_vec.len() -1
     }
 
-    pub fn internal_check(&'a mut self) {
+    pub fn internal_check(&mut self) {
         for int_check in &mut self.int_vec{
-            let (err_i,int_check) = int_check;
-            let mut err_cel = &mut self.err_vec[*err_i];
-            match int_check.run_check() {
-                ErrStatus::ERR => 
-                {
-                    let err = ICSError{
-                        e_type: ErrorType::INTERNAL,
-                        e_desc: int_check.get_description(),
-                    };
-
-                    *err_cel = Some(err);
-                },
-                _ => *err_cel = None,
-            }
+            int_check.run_check();
         }
     }
 
@@ -99,27 +85,15 @@ where FC : FnMut() -> bool,
             return Err("invalid index range fir ext_vec")
         }
 
-        let (ch_index,ext_check) = &mut self.ext_vec[ext_err_index];
-        let mut err_cel = &mut self.err_vec[*ch_index];
-        match ext_check.check_mex(mex) {
-            Ok(ErrStatus::ERR)=> {
-                    let err = ICSError{
-                        e_type: ErrorType::EXTERNAL,
-                        e_desc: ext_check.get_description(),
-                    };
-
-                    *err_cel = Some(err);
-                    Ok(())
-            },
-            Ok(ErrStatus::OK) => Ok(()),
-            Err(_) => Err("comparing wrong messages"),
-        }
+        let ext_check = &mut self.ext_vec[ext_err_index];
+        ext_check.check_mex(mex);
+       Ok(())
     }
 
     pub fn get_err_info(&self,err_type: ErrorType, err_index: usize) -> Option<&str> {
-        fn get_dscr<'a,G: GenericCheck<'a>>(vc : &'a Vec<(usize,G)>, idx: usize) -> Option<&'a str>{
+        fn get_dscr<'a,G: GenericCheck<'a>>(vc : &'a Vec<G>, idx: usize) -> Option<&'a str>{
                 if idx < vc.len(){
-                    let (_,err) = &vc[idx];
+                    let err = &vc[idx];
                     Some(err.get_description())
                 }else{
                     None
@@ -132,30 +106,66 @@ where FC : FnMut() -> bool,
     }
 
     pub fn create_ics_messages(&self) -> Box<[ICSMex<S>]>{
-        let num_mex = {
-            match (self.err_vec.len()/S, self.err_vec.len()%S){
-                (i,0) => i,
-                (i,_) => i +1
-            }
-        };
-        let mut res = Vec::with_capacity(num_mex);
-        for i in 0..num_mex{
-            let mut mex: ICSMex<S> = ICSMex::new(self.id, self.ps);
-            for j in 0_u8..8_u8{
-                match self.err_vec[(i*8)+ usize::from(j)] {
-                    None => (),
-                    Some(_) => {
-                        mex.set_err(i, j);
+
+        fn test_ch<'a,C: GenericCheck<'a>, const S:usize>
+            (res: &mut Vec<ICSMex<S>>,cl: &Vec<C>,bit_s: &mut u8,mex_part: &mut usize,id:usize){
+            for int_check in cl.iter(){
+                if  usize::from(*bit_s) >= 8 * S {
+                    res.push(ICSMex::new(id, *mex_part));
+                    *mex_part+=1;
+                    *bit_s =0;
+                }
+
+                match int_check.get_status(){
+                    crate::ics_trait::generic_check::ErrStatus::ERR =>{
+                        res[*mex_part].set_err(usize::from(*bit_s/8), *bit_s%8);
                     },
+                    _ => (),
                 };
+
+                *bit_s+=1;
             }
-            res.push(mex);
         }
 
+        let tot_bit = self.ext_vec.len() + self.int_vec.len();
+        let tot_byte = tot_bit/8 + tot_bit % 2;
+        let tot_array = tot_byte / S + tot_byte%2;
+        let mut res = Vec::with_capacity(tot_array);
+        let mut bit_s : u8= 0;
+        let mut mex_part = 0;
+
+        res.push(ICSMex::new(self.id, mex_part));
+        test_ch(&mut res, &self.int_vec, &mut bit_s, &mut mex_part, self.id);
+        test_ch(&mut res, &self.ext_vec, &mut bit_s, &mut mex_part, self.id);
         res.into_boxed_slice()
     }
 }
 
+#[allow(unused)]
 #[cfg(test)]
 mod test{
+    use internal::InternalCheck;
+
+    use crate::ics::ICS;
+    use crate::ics_trait::*;
+
+    const MEXSIZE : usize= 8;
+
+    type FC = fn () -> bool;
+    type FF = fn () -> ();
+
+    #[test]
+    fn create_ics() {
+        let check_func : FC = || true;
+        let on_fail_func : FF = || {};
+        let on_recover_func : FF = || {};
+
+        let mut ic : ICS<FC, FF, FF, MEXSIZE> = ICS::new(12, 3);
+        ic.internal_check();
+        let err_mex_arr = ic.create_ics_messages();
+
+        for mex in err_mex_arr.iter() {
+            assert_eq!(mex.check_err(None),false);
+        }
+    }
 }

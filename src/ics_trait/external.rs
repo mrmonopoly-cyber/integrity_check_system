@@ -19,6 +19,10 @@ impl<'a,const S :usize> GenericCheck<'a> for ICSDep<'a,S>{
     fn get_description(&'a self) -> &'a str{
         &self.description
     }
+
+    fn get_status(&self) -> ErrStatus {
+        self.status.clone()
+    }
 }
 
 #[allow(unused)]

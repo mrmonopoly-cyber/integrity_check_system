@@ -21,6 +21,11 @@ impl<'a,FC,FF,FR> GenericCheck<'a>  for InternalCheck<'a,FC,FF,FR> where
     fn get_description(&self) -> &'a str{
         &self.description
     }
+
+    fn get_status(&self) -> ErrStatus {
+        self.status.clone()
+    }
+
 }
 
 #[allow(unused)]
