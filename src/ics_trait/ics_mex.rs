@@ -20,12 +20,17 @@ impl<const S:usize> ICSMex<S>
                 false => false,
                 true =>{
                     let byte_idx = err_idx/S;
-                    let bit_idx = err_idx %8;
+                    let bit_idx =err_idx %8;
                     let err_cell = usize::from(self.err_vec[byte_idx]);
-                    (err_cell & bit_idx) == 1
+                    err_cell.is_set(bit_idx)
                 },
             }
         }else{
+            for i in self.err_vec.iter(){
+                if *i > 0 {
+                    return true;
+                };
+            };
             false
         }
     }
@@ -39,6 +44,12 @@ impl<const S:usize> ICSMex<S>
             self.err_vec[idx] = self.err_vec[idx].set_bit(bit);
         }
     }
+
+    pub fn clear_err(&mut self, idx:usize, bit: u8){
+        if idx < 8 {
+            self.err_vec[idx] = self.err_vec[idx].clear_bit(bit);
+        }
+    }
 }
 
 #[cfg(test)]
@@ -46,10 +57,42 @@ mod test{
     use super::ICSMex;
 
     #[test]
-    fn check_err() {
+    fn check_err_index() {
+        let mut err : ICSMex<13> = ICSMex::new(12, 1);
+        err.set_err(0, 0);
+        assert_eq!(err.check_err(Some(0)),true);
+    }
+
+    #[test]
+    fn check_err_all() {
         let mut err : ICSMex<13> = ICSMex::new(12, 1);
         err.set_err(0, 0);
         err.set_err(0, 1);
-        assert_eq!(err.err_vec[0],3);
+        assert_eq!(err.check_err(None),true);
+    }
+
+    #[test]
+    fn check_err_all_no_one() {
+        let mut err : ICSMex<13> = ICSMex::new(12, 1);
+        err.set_err(0, 0);
+        err.clear_err(0, 0);
+        assert_eq!(err.check_err(None),false);
+    }
+
+    #[test]
+    fn check_err_all_no_index() {
+        let mut err : ICSMex<13> = ICSMex::new(12, 1);
+        err.set_err(0, 0);
+        err.clear_err(0, 0);
+        assert_eq!(err.check_err(Some(0)),false);
+    }
+
+    #[test]
+    fn check_new(){
+        let t : ICSMex<2> = ICSMex::new(12, 0);
+
+        let tl = t.err_vec.len();
+        assert_eq!(t.check_err(None),false);
+        assert_eq!(tl,2);
     }
 }
