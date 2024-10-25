@@ -67,7 +67,8 @@ impl<'a,const S:usize> ICSDep<'a,S>{
 
 #[cfg(test)]
 mod test{
-    use crate::ics_trait::{external::ICSDep, generic_check::ErrStatus};
+    use crate::ics_trait::{external::ICSDep, generic_check::ErrStatus, ics_mex::ICSMex};
+    use core::result;
 
     const STR : &str = "dep test";
     const ID : usize = 1;
@@ -86,4 +87,65 @@ mod test{
         assert_eq!(t.status,ErrStatus::OK);
 
     }
+
+    #[test]
+    fn discard_wrong_mex_wrong_id() {
+        let mf = || -> () {};
+        let rf = || -> () {};
+        let mut t : ICSDep<1>= ICSDep::new(STR, ID, PART, Some(ERR_IDX), mf, rf);
+
+        let wm : ICSMex<1> = ICSMex::new(ID + 1, PART);
+
+        let r = t.check_mex(&wm);
+        assert_eq!(Err("invalid id mex or part mex"),r);
+    }
+
+    #[test]
+    fn discard_wrong_mex_wrong_part() {
+        let mf = || -> () {};
+        let rf = || -> () {};
+        let mut t : ICSDep<1>= ICSDep::new(STR, ID, PART, Some(ERR_IDX), mf, rf);
+
+        let wm : ICSMex<1> = ICSMex::new(ID, PART + 12);
+
+        let r = t.check_mex(&wm);
+        assert_eq!(Err("invalid id mex or part mex"),r);
+    }
+
+    #[test]
+    fn discard_wrong_mex_wrong_id_part() {
+        let mf = || -> () {};
+        let rf = || -> () {};
+        let mut t : ICSDep<1>= ICSDep::new(STR, ID, PART, Some(ERR_IDX), mf, rf);
+
+        let wm : ICSMex<1> = ICSMex::new(ID + 1, PART + 12);
+
+        let r = t.check_mex(&wm);
+        assert_eq!(Err("invalid id mex or part mex"),r);
+    }
+
+    #[test]
+    fn recognize_err_in_mex() {
+        let mf = || -> () {};
+        let rf = || -> () {};
+        let mut t : ICSDep<1>= ICSDep::new(STR, ID, PART, Some(6), mf, rf);
+
+        let mut wm : ICSMex<1> = ICSMex::new(ID, PART);
+        let _ = wm.set_err(0, 6);
+        
+        let r = t.check_mex(&wm);
+        assert_eq!(result::Result::Ok(ErrStatus::ERR),r);
+    }
+
+    #[test]
+    fn recognize_ok_mex() {
+        let mf = || -> () {};
+        let rf = || -> () {};
+        let mut t : ICSDep<1>= ICSDep::new(STR, ID, PART, Some(ERR_IDX), mf, rf);
+
+        let wm : ICSMex<1> = ICSMex::new(ID, PART);
+        let r = t.check_mex(&wm);
+        assert_eq!(result::Result::Ok(ErrStatus::OK),r);
+    }
+    
 }
