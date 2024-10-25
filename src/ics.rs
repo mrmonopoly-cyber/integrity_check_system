@@ -92,24 +92,25 @@ where FC : FnMut() -> bool,
     }
 
 
-    pub fn check_specific_mex(&'a mut self,mex: &ICSMex<S>, ext_err_index: usize){
+    pub fn check_specific_mex(&'a mut self,mex: &ICSMex<S>, ext_err_index: usize) -> Result<(),&str>{
         if ext_err_index >= self.ext_vec.len() {
-            ()
+            return Err("invalid index range fir ext_vec")
         }
 
         let (ch_index,ext_check) = &mut self.ext_vec[ext_err_index];
         let mut err_cel = &mut self.err_vec[*ch_index];
         match ext_check.check_mex(mex) {
-            ErrStatus::ERR=> {
+            Ok(ErrStatus::ERR)=> {
                     let err = ICSError{
                         e_type: ErrorType::EXTERNAL,
                         e_desc: ext_check.get_description(),
                     };
 
                     *err_cel = Some(err);
+                    Ok(())
             },
-            ErrStatus::OK=> (),
-            
+            Ok(ErrStatus::OK) => Ok(()),
+            Err(_) => Err("comparing wrong messages"),
         }
     }
 

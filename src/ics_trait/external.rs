@@ -1,5 +1,6 @@
 use super::generic_check::{GenericCheck,ErrFn,ErrStatus};
 use super::ics_mex::ICSMex;
+use core::result;
 
 
 #[allow(unused)]
@@ -22,25 +23,24 @@ impl<const S :usize> GenericCheck for ICSDep<S>{
 
 #[allow(unused)]
 impl<const S:usize> ICSDep<S>{
-    pub fn check_mex(&mut self, mex: &ICSMex<S>) -> ErrStatus
+
+    pub fn check_mex(&mut self, mex: &ICSMex<S>) -> result::Result<ErrStatus,&str>
     {
         if  mex.same_id_part(self.id, self.part) {
             match (mex.check_err(self.error_idx),&self.status){
                 (true, ErrStatus::OK) => {
                     (self.manage_fail)();
                     self.status = ErrStatus::ERR;
-                    ErrStatus::ERR
                 },
-                (true, ErrStatus::ERR) =>ErrStatus::ERR,
-                (false, ErrStatus::OK) => ErrStatus::OK,
                 (false, ErrStatus::ERR) => {
                     (self.reset_fail)();
                     self.status = ErrStatus::OK;
-                    ErrStatus::OK
                 },
-            }
+                _ => (),
+            };
+            Ok(self.status.clone())
         }else{
-            ErrStatus::OK
+            Err("invalid id mex or part mex")
         }
     }
     
