@@ -1,12 +1,12 @@
 use crate::ics_trait::generic_check::{ErrStatus,GenericCheck};
 
 #[allow(unused)]
-pub struct InternalCheck<FC,FF,FR> where
+pub struct InternalCheck<'a,FC,FF,FR> where
     FC: FnMut() -> bool,
     FF: FnMut() -> (),
     FR: FnMut() -> (),
       {
-    description: String,
+    description: &'a str,
     check :FC,
     fail: FF,
     restore: FR,
@@ -14,21 +14,21 @@ pub struct InternalCheck<FC,FF,FR> where
 }
 
 #[allow(unused)]
-impl<FC,FF,FR> GenericCheck  for InternalCheck<FC,FF,FR> where
+impl<'a,FC,FF,FR> GenericCheck<'a>  for InternalCheck<'a,FC,FF,FR> where
     FC: FnMut() -> bool,
     FF: FnMut() -> (),
     FR: FnMut() -> (),{
-    fn get_description(&self) -> &String{
+    fn get_description(&self) -> &'a str{
         &self.description
     }
 }
 
 #[allow(unused)]
-impl<FC,FF,FR> InternalCheck<FC,FF,FR> where
+impl<'a,FC,FF,FR> InternalCheck<'a,FC,FF,FR> where
 FC: FnMut() -> bool,
 FF: FnMut() -> (),
 FR: FnMut() -> (){
-    pub fn new(description: String, check: FC,fail: FF,restore: FR) -> Self{
+    pub fn new(description: &'a str, check: FC,fail: FF,restore: FR) -> Self{
         Self{description,check,fail,restore,status:ErrStatus::OK}
     }
 
@@ -78,11 +78,10 @@ mod test{
 
     fn run_test(check_seq: &[(usize,usize)]){
         let check_var = core::sync::atomic::AtomicUsize::new(0);
-        let str = STR.to_string();
         let check_f = || -> bool {check_fun(&check_var)};
         let fail_f= || -> () {fail_fun(&check_var)};
         let rest_f= || -> () {rest_fun(&check_var)};
-        let mut int_check = InternalCheck::new(str, check_f,fail_f,rest_f);
+        let mut int_check = InternalCheck::new(STR, check_f,fail_f,rest_f);
         for (i,d) in check_seq.iter(){
             check_var.store(*i, atomic::Ordering::Relaxed);
             int_check.run_check();
@@ -114,7 +113,7 @@ mod test{
         let check_f = || -> bool {check_fun(&v)};
         let fail_f= || -> () {fail_fun(&v)};
         let rest_f= || -> () {rest_fun(&v)};
-        let d = InternalCheck::new(STR.to_string(), check_f,fail_f,rest_f);
+        let d = InternalCheck::new(STR, check_f,fail_f,rest_f);
 
         assert_eq!(d.get_description(),STR);
     }

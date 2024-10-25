@@ -14,7 +14,7 @@ pub enum ErrorType {
 #[derive(Debug,Clone)]
 pub struct ICSError<'a>{
     e_type: ErrorType,
-    e_desc: &'a String,
+    e_desc: &'a str,
 }
 
 #[allow(unused)]
@@ -23,8 +23,8 @@ where FC: FnMut() -> bool,
       FF: FnMut() -> (),
       FR: FnMut() -> (),
 {
-    int_vec: Vec<(usize,InternalCheck<FC,FF,FR>)>,
-    ext_vec: Vec<(usize,ICSDep<S>)>,
+    int_vec: Vec<(usize,InternalCheck<'a,FC,FF,FR>)>,
+    ext_vec: Vec<(usize,ICSDep<'a,S>)>,
     err_vec: Vec<Option<ICSError<'a>>>,
     id: usize,
     ps: usize,
@@ -59,13 +59,13 @@ where FC : FnMut() -> bool,
         Self {int_vec: ie,ext_vec: ee, err_vec: ev,id, ps: parts}
     }
 
-    pub fn add_internal_check(&mut self, check: InternalCheck<FC,FF,FR>){
+    pub fn add_internal_check(&mut self, check: InternalCheck<'a,FC,FF,FR>){
         let l = self.err_vec.len();
         self.int_vec.push((l,check));
         self.err_vec.push(None)
     }
 
-    pub fn add_external_check(&mut self, check: ICSDep<S>) -> usize{
+    pub fn add_external_check(&mut self, check: ICSDep<'a,S>) -> usize{
         let l = self.err_vec.len();
         self.ext_vec.push((l,check));
         self.err_vec.push(None);
@@ -114,8 +114,8 @@ where FC : FnMut() -> bool,
         }
     }
 
-    pub fn get_err_info(&self,err_type: ErrorType, err_index: usize) -> Option<&String> {
-        fn get_dscr<'a,G: GenericCheck>(vc : &'a Vec<(usize,G)>, idx: usize) -> Option<&'a String>{
+    pub fn get_err_info(&self,err_type: ErrorType, err_index: usize) -> Option<&str> {
+        fn get_dscr<'a,G: GenericCheck<'a>>(vc : &'a Vec<(usize,G)>, idx: usize) -> Option<&'a str>{
                 if idx < vc.len(){
                     let (_,err) = &vc[idx];
                     Some(err.get_description())

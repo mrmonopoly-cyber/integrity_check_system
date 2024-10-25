@@ -5,8 +5,8 @@ use core::result;
 
 #[allow(unused)]
 #[derive(Debug)]
-pub struct ICSDep<const S: usize>{
-    description: String,
+pub struct ICSDep<'a,const S: usize>{
+    description: &'a str,
     id: usize,
     part: usize,
     error_idx: Option<usize>,
@@ -15,14 +15,33 @@ pub struct ICSDep<const S: usize>{
     status: ErrStatus,
 }
 
-impl<const S :usize> GenericCheck for ICSDep<S>{
-    fn get_description(&self) -> &String {
+impl<'a,const S :usize> GenericCheck<'a> for ICSDep<'a,S>{
+    fn get_description(&'a self) -> &'a str{
         &self.description
     }
 }
 
 #[allow(unused)]
-impl<const S:usize> ICSDep<S>{
+impl<'a,const S:usize> ICSDep<'a,S>{
+
+    pub fn new(
+        description: &'a str,
+        id: usize,
+        part: usize,
+        error_idx: Option<usize>,
+        manage_fail: ErrFn,
+        reset_fail: ErrFn,
+        ) -> Self{
+        ICSDep { 
+            description, 
+            id, 
+            part, 
+            error_idx, 
+            manage_fail,
+            reset_fail, 
+            status: ErrStatus::OK 
+        }
+    }
 
     pub fn check_mex(&mut self, mex: &ICSMex<S>) -> result::Result<ErrStatus,&str>
     {
@@ -48,4 +67,23 @@ impl<const S:usize> ICSDep<S>{
 
 #[cfg(test)]
 mod test{
+    use crate::ics_trait::{external::ICSDep, generic_check::ErrStatus};
+
+    const STR : &str = "dep test";
+    const ID : usize = 1;
+    const PART : usize = 0;
+    const ERR_IDX: usize = 0;
+
+    #[test]
+    fn create_dep() {
+        let mf = || -> () {};
+        let rf = || -> () {};
+        let t : ICSDep<1>= ICSDep::new(STR, ID, PART, Some(ERR_IDX), mf, rf);
+
+        assert_eq!(t.description,STR);
+        assert_eq!(t.id,ID);
+        assert_eq!(t.part,PART);
+        assert_eq!(t.status,ErrStatus::OK);
+
+    }
 }

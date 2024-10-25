@@ -6,6 +6,6 @@ pub enum ErrStatus{
 
 pub type ErrFn= fn() -> ();
 
-pub trait GenericCheck {
-    fn get_description(&self) -> &String;
+pub trait GenericCheck<'a> {
+    fn get_description(&'a self) -> &'a str;
 }
