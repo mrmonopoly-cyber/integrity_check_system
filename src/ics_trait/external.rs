@@ -1,21 +1,28 @@
-use super::generic_check::{GenericCheck,ErrFn,ErrStatus};
+use super::generic_check::{GenericCheck,ErrStatus};
 use super::ics_mex::ICSMex;
 use core::result;
 
 
 #[allow(unused)]
 #[derive(Debug)]
-pub struct ICSDep<'a,const S: usize>{
+pub struct ICSDep<'a,FF,EF,const S: usize>
+where FF: FnMut() -> (),
+      EF: FnMut() -> (),
+      {
     description: &'a str,
     id: usize,
     part: usize,
     error_idx: Option<usize>,
-    manage_fail: ErrFn,
-    reset_fail: ErrFn,
+    manage_fail: FF,
+    reset_fail: EF,
     status: ErrStatus,
 }
 
-impl<'a,const S :usize> GenericCheck<'a> for ICSDep<'a,S>{
+impl<'a,FF,EF,const S :usize> GenericCheck<'a> for ICSDep<'a,FF,EF,S>
+where FF: FnMut () -> (),
+      EF: FnMut () -> (),
+
+      {
     fn get_description(&'a self) -> &'a str{
         &self.description
     }
@@ -26,15 +33,16 @@ impl<'a,const S :usize> GenericCheck<'a> for ICSDep<'a,S>{
 }
 
 #[allow(unused)]
-impl<'a,const S:usize> ICSDep<'a,S>{
-
+impl<'a,FF,EF,const S:usize> ICSDep<'a,FF,EF,S>
+where FF: FnMut () -> (), 
+      EF: FnMut () -> (),{
     pub fn new(
         description: &'a str,
         id: usize,
         part: usize,
         error_idx: Option<usize>,
-        manage_fail: ErrFn,
-        reset_fail: ErrFn,
+        manage_fail: FF,
+        reset_fail: EF,
         ) -> Self{
         ICSDep { 
             description, 
@@ -83,7 +91,7 @@ mod test{
     fn create_dep() {
         let mf = || -> () {};
         let rf = || -> () {};
-        let t : ICSDep<1>= ICSDep::new(STR, ID, PART, Some(ERR_IDX), mf, rf);
+        let t : ICSDep<_,_,1>= ICSDep::new(STR, ID, PART, Some(ERR_IDX), mf, rf);
 
         assert_eq!(t.description,STR);
         assert_eq!(t.id,ID);
@@ -96,7 +104,7 @@ mod test{
     fn discard_wrong_mex_wrong_id() {
         let mf = || -> () {};
         let rf = || -> () {};
-        let mut t : ICSDep<1>= ICSDep::new(STR, ID, PART, Some(ERR_IDX), mf, rf);
+        let mut t : ICSDep<_,_,1>= ICSDep::new(STR, ID, PART, Some(ERR_IDX), mf, rf);
 
         let wm : ICSMex<1> = ICSMex::new(ID + 1, PART);
 
@@ -108,7 +116,7 @@ mod test{
     fn discard_wrong_mex_wrong_part() {
         let mf = || -> () {};
         let rf = || -> () {};
-        let mut t : ICSDep<1>= ICSDep::new(STR, ID, PART, Some(ERR_IDX), mf, rf);
+        let mut t : ICSDep<_,_,1>= ICSDep::new(STR, ID, PART, Some(ERR_IDX), mf, rf);
 
         let wm : ICSMex<1> = ICSMex::new(ID, PART + 12);
 
@@ -120,7 +128,7 @@ mod test{
     fn discard_wrong_mex_wrong_id_part() {
         let mf = || -> () {};
         let rf = || -> () {};
-        let mut t : ICSDep<1>= ICSDep::new(STR, ID, PART, Some(ERR_IDX), mf, rf);
+        let mut t : ICSDep<_,_,1>= ICSDep::new(STR, ID, PART, Some(ERR_IDX), mf, rf);
 
         let wm : ICSMex<1> = ICSMex::new(ID + 1, PART + 12);
 
@@ -132,7 +140,7 @@ mod test{
     fn recognize_err_in_mex() {
         let mf = || -> () {};
         let rf = || -> () {};
-        let mut t : ICSDep<1>= ICSDep::new(STR, ID, PART, Some(6), mf, rf);
+        let mut t : ICSDep<_,_,1>= ICSDep::new(STR, ID, PART, Some(6), mf, rf);
 
         let mut wm : ICSMex<1> = ICSMex::new(ID, PART);
         let _ = wm.set_err(0, 6);
@@ -146,7 +154,7 @@ mod test{
     fn recognize_err_in_any_pos() {
         let mf = || -> () {};
         let rf = || -> () {};
-        let mut t : ICSDep<1>= ICSDep::new(STR, ID, PART, None, mf, rf);
+        let mut t : ICSDep<_,_,1>= ICSDep::new(STR, ID, PART, None, mf, rf);
 
         let mut wm : ICSMex<1> = ICSMex::new(ID, PART);
         let _ = wm.set_err(0, 3);
@@ -158,7 +166,7 @@ mod test{
     fn recognize_ok_mex() {
         let mf = || -> () {};
         let rf = || -> () {};
-        let mut t : ICSDep<1>= ICSDep::new(STR, ID, PART, Some(ERR_IDX), mf, rf);
+        let mut t : ICSDep<_,_,1>= ICSDep::new(STR, ID, PART, Some(ERR_IDX), mf, rf);
 
         let mut wm : ICSMex<1> = ICSMex::new(ID, PART);
         let _ = wm.set_err(0, 3);
