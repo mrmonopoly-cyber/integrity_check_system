@@ -132,7 +132,20 @@ mod test{
 
         let mut wm : ICSMex<1> = ICSMex::new(ID, PART);
         let _ = wm.set_err(0, 6);
+        let _ = wm.set_err(0, 3);
         
+        let r = t.check_mex(&wm);
+        assert_eq!(result::Result::Ok(ErrStatus::ERR),r);
+    }
+
+    #[test]
+    fn recognize_err_in_any_pos() {
+        let mf = || -> () {};
+        let rf = || -> () {};
+        let mut t : ICSDep<1>= ICSDep::new(STR, ID, PART, None, mf, rf);
+
+        let mut wm : ICSMex<1> = ICSMex::new(ID, PART);
+        let _ = wm.set_err(0, 3);
         let r = t.check_mex(&wm);
         assert_eq!(result::Result::Ok(ErrStatus::ERR),r);
     }
@@ -143,9 +156,9 @@ mod test{
         let rf = || -> () {};
         let mut t : ICSDep<1>= ICSDep::new(STR, ID, PART, Some(ERR_IDX), mf, rf);
 
-        let wm : ICSMex<1> = ICSMex::new(ID, PART);
+        let mut wm : ICSMex<1> = ICSMex::new(ID, PART);
+        let _ = wm.set_err(0, 3);
         let r = t.check_mex(&wm);
         assert_eq!(result::Result::Ok(ErrStatus::OK),r);
     }
-    
 }
