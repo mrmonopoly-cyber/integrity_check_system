@@ -145,7 +145,6 @@ where FC : FnMut() -> bool,
 #[cfg(test)]
 mod test{
     use core::sync::atomic;
-
     use internal::InternalCheck;
 
     use crate::ics::ICS;
