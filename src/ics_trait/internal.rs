@@ -1,23 +1,16 @@
 use crate::ics_trait::generic_check::{ErrStatus,GenericCheck};
 
+use super::generic_check::ObjectCheck;
+
 #[allow(unused)]
-pub struct InternalCheck<'a,FC,FF,FR> where
-    FC: FnMut() -> bool,
-    FF: FnMut() -> (),
-    FR: FnMut() -> (),
-      {
+pub struct InternalCheck<'a>{
+    volatile_par: &'a mut dyn ObjectCheck,
     description: &'a str,
-    check :FC,
-    fail: FF,
-    restore: FR,
     status: ErrStatus,
 }
 
 #[allow(unused)]
-impl<'a,FC,FF,FR> GenericCheck<'a>  for InternalCheck<'a,FC,FF,FR> where
-    FC: FnMut() -> bool,
-    FF: FnMut() -> (),
-    FR: FnMut() -> (),{
+impl<'a> GenericCheck<'a>  for InternalCheck<'a>{
     fn get_description(&self) -> &'a str{
         &self.description
     }
@@ -29,20 +22,17 @@ impl<'a,FC,FF,FR> GenericCheck<'a>  for InternalCheck<'a,FC,FF,FR> where
 }
 
 #[allow(unused)]
-impl<'a,FC,FF,FR> InternalCheck<'a,FC,FF,FR> where
-FC: FnMut() -> bool,
-FF: FnMut() -> (),
-FR: FnMut() -> (){
-    pub fn new(description: &'a str, check: FC,fail: FF,restore: FR) -> Self{
-        Self{description,check,fail,restore,status:ErrStatus::OK}
+impl<'a> InternalCheck<'a> where{
+    pub fn new(description: &'a str,volatile_par: &'a mut dyn ObjectCheck,) -> Self{
+        Self{volatile_par,description,status:ErrStatus::OK}
     }
 
     pub fn run_check(&mut self) -> ErrStatus
     {
-        match ((self.check)(),&self.status){
+        match (self.volatile_par.check(),&self.status){
             (false,ErrStatus::OK) =>{
                 self.status = ErrStatus::ERR;
-                (self.fail)();
+                self.volatile_par.manage_fail();
                 ErrStatus::ERR
             },
             (false,ErrStatus::ERR) =>{
@@ -50,7 +40,7 @@ FR: FnMut() -> (){
             },
             (true,ErrStatus::ERR) =>{
                 self.status = ErrStatus::OK;
-                (self.restore)();
+                self.volatile_par.restore_fail();
                 ErrStatus::OK
             },
             (true,ErrStatus::OK) =>{
@@ -60,38 +50,15 @@ FR: FnMut() -> (){
     }
 }
 
+#[allow(unused)]
 #[cfg(test)]
 mod test{
     use core::sync::atomic;
-
-    use crate::ics_trait::generic_check::GenericCheck;
-    use super::InternalCheck;
-
+    use crate::ics_trait::generic_check:: ObjectCheck;
     static STR: &str= "internal_check_test";
 
-    fn check_fun(var: &atomic::AtomicUsize) -> bool{
-        var.load(atomic::Ordering::Relaxed) < 10
-    }
-
-    fn fail_fun(var: &atomic::AtomicUsize){
-        var.store(99, atomic::Ordering::Relaxed)
-    }
-
-    fn rest_fun(var: &atomic::AtomicUsize){
-        var.store(9, atomic::Ordering::Relaxed)
-    }
-
     fn run_test(check_seq: &[(usize,usize)]){
-        let check_var = core::sync::atomic::AtomicUsize::new(0);
-        let check_f = || -> bool {check_fun(&check_var)};
-        let fail_f= || -> () {fail_fun(&check_var)};
-        let rest_f= || -> () {rest_fun(&check_var)};
-        let mut int_check = InternalCheck::new(STR, check_f,fail_f,rest_f);
-        for (i,d) in check_seq.iter(){
-            check_var.store(*i, atomic::Ordering::Relaxed);
-            int_check.run_check();
-            assert_eq!(check_var.load(atomic::Ordering::Relaxed),*d);
-        }
+        todo!()
     }
 
     #[test]
@@ -114,12 +81,6 @@ mod test{
 
     #[test]
     fn valid_description(){
-        let v= atomic::AtomicUsize::new(1);
-        let check_f = || -> bool {check_fun(&v)};
-        let fail_f= || -> () {fail_fun(&v)};
-        let rest_f= || -> () {rest_fun(&v)};
-        let d = InternalCheck::new(STR, check_f,fail_f,rest_f);
-
-        assert_eq!(d.get_description(),STR);
+        todo!()
     }
 }

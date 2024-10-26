@@ -20,23 +20,15 @@ pub struct ICSError<'a>{
 }
 
 #[allow(unused)]
-pub struct ICS<'a,FC,FF,FR,const S:usize>
-where FC: FnMut() -> bool,
-      FF: FnMut() -> (),
-      FR: FnMut() -> (),
-{
-    int_vec: Vec<InternalCheck<'a,FC,FF,FR>>,
-    ext_vec: Vec<ICSDep<'a,FF,FR,S>>,
+pub struct ICS<'a,const S:usize>{
+    int_vec: Vec<InternalCheck<'a>>,
+    ext_vec: Vec<ICSDep<'a,S>>,
     id: usize,
     ps: usize,
 }
 
 #[allow(unused)]
-impl<'a,FC,FF,FR,const S: usize> ICS<'a,FC,FF,FR,S> 
-where FC : FnMut() -> bool,
-      FF : FnMut() -> (),
-      FR : FnMut() -> (),
-{
+impl<'a,const S: usize> ICS<'a,S> {
     pub fn new(id:usize, parts: usize) -> Self {
         Self {
             int_vec: Vec::new(),
@@ -59,17 +51,17 @@ where FC : FnMut() -> bool,
 
     pub fn full_spec(
         id:usize, parts: usize,
-        int_vec: Vec<InternalCheck<'a,FC,FF,FR>>, ext_vec: Vec<ICSDep<'a,FF,FR,S>>) -> Self{
+        int_vec: Vec<InternalCheck<'a>>, ext_vec: Vec<ICSDep<'a,S>>) -> Self{
         Self{
             id,ps:parts, int_vec,ext_vec
         }
     }
 
-    pub fn add_internal_check(&mut self, check: InternalCheck<'a,FC,FF,FR>){
+    pub fn add_internal_check(&mut self, check: InternalCheck<'a>){
         self.int_vec.push(check);
     }
 
-    pub fn add_external_check(&mut self, check: ICSDep<'a,FF,FR,S>) -> usize{
+    pub fn add_external_check(&mut self, check: ICSDep<'a,S>) -> usize{
         self.ext_vec.push(check);
         self.ext_vec.len() -1
     }
@@ -97,7 +89,7 @@ where FC : FnMut() -> bool,
         Ok(())
     }
 
-    pub fn get_err_info(&self,err_type: ErrorType, err_index: usize) -> Option<&str> {
+    pub fn get_err_info(&'a self,err_type: ErrorType, err_index: usize) -> Option<&str> {
         fn get_dscr<'a,G: GenericCheck<'a>>(vc : &'a Vec<G>, idx: usize) -> Option<&'a str>{
                 if idx < vc.len(){
                     let err = &vc[idx];
@@ -158,76 +150,40 @@ mod test{
 
     use crate::ics::ICS;
     use crate::ics_trait::*;
+    use core::sync::atomic::AtomicI8;
+    use core::sync::atomic::Ordering;
 
     const MEXSIZE : usize= 8;
 
+    fn check_f(p: &AtomicI8) -> bool {
+        p.load(Ordering::Relaxed) >= 0
+    }
+
+    fn fail_f(p: &AtomicI8) {
+        p.store(-1, Ordering::Relaxed);
+    }
+
+    fn rest_f(p: &AtomicI8) {
+        p.store(0, Ordering::Relaxed);
+    }
+
     #[test]
     fn create_ics() {
-        let mut ic : ICS<fn()-> bool,fn () -> (),fn () ->(), MEXSIZE> = ICS::new(12, 3);
-        ic.internal_check();
-        let err_mex_arr = ic.create_ics_messages();
-
-        for mex in err_mex_arr.iter() {
-            assert_eq!(mex.check_err(None),false);
-        }
+        todo!()
     }
 
     #[test]
     fn locate_internal_fail() {
-        let mut var_to_check = atomic::AtomicI8::new(12);
-        let mut ic : ICS<_, _, _, MEXSIZE> = ICS::new(12, 3);
-        let ck = || var_to_check.load(atomic::Ordering::Relaxed) < 10;
-        let ff = || var_to_check.store(-1, atomic::Ordering::Relaxed);
-        let fr = || var_to_check.store(8,atomic::Ordering::Relaxed);
-        ic.add_internal_check(InternalCheck::new("dummy check", ck, ff, fr));
-        ic.internal_check();
-        let res = ic.create_ics_messages();
-        let mut mex_c = 0;
-        for mex_p in res.iter(){
-            mex_c+=1;
-            assert_eq!(mex_p.check_err(Some(0)),true);
-        }
-        assert_eq!(mex_c,1);
+        todo!()
     }
 
     #[test]
     fn locate_external_fail_spec_mex() {
-        let mut ic : ICS<fn () -> bool, _, _, MEXSIZE> = ICS::new(12, 3);
-        let mut fail = atomic::AtomicBool::new(false);
-        let mf = || fail.store(true, atomic::Ordering::Relaxed);
-        let rf = || fail.store(false, atomic::Ordering::Relaxed);
-        let ext_c = ICSDep::new("dummy ext", 12, 0, Some(1), mf, rf);
-        let mex_index = ic.add_external_check(ext_c);
-        let mut err_mex : ICSMex<MEXSIZE>= ICSMex::new(12, 0);
-        err_mex.set_err(0, 1);
-        let res = ic.check_specific_mex(&err_mex, mex_index);
-        assert_eq!(res,Ok(()));
-        let errs = ic.create_ics_messages();
-        let mut part_c = 0;
-        for p in errs.iter(){
-            part_c+=1;
-            assert_eq!(p.check_err(Some(0)),true);
-        }
-        assert_eq!(part_c,1);
+        todo!()
     }
 
     #[test]
     fn locate_external_fail_general_mex() {
-        let mut ic : ICS<fn () -> bool, _, _, MEXSIZE> = ICS::new(12, 3);
-        let mut fail = atomic::AtomicBool::new(false);
-        let mf = || fail.store(true, atomic::Ordering::Relaxed);
-        let rf = || fail.store(false, atomic::Ordering::Relaxed);
-        let ext_c = ICSDep::new("dummy ext", 12, 0, Some(1), mf, rf);
-        let mex_index = ic.add_external_check(ext_c);
-        let mut err_mex : ICSMex<MEXSIZE>= ICSMex::new(12, 0);
-        err_mex.set_err(0, 1);
-        ic.check_general_mex(&err_mex);
-        let errs = ic.create_ics_messages();
-        let mut part_c = 0;
-        for p in errs.iter(){
-            part_c+=1;
-            assert_eq!(p.check_err(Some(0)),true);
-        }
-        assert_eq!(part_c,1);
+        todo!()
     }
 }
