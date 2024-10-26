@@ -29,12 +29,16 @@ pub struct ICS<'a,const S:usize>{
 
 #[allow(unused)]
 impl<'a,const S: usize> ICS<'a,S> {
-    pub fn new(id:usize, parts: usize) -> Self {
-        Self {
-            int_vec: Vec::new(),
-            ext_vec: Vec::new(),
-            id,
-            ps: parts
+    pub fn new(id:usize, parts: usize) -> Result<Self,&'a str> {
+        if parts > 0 {
+            Ok(Self {
+                int_vec: Vec::new(),
+                ext_vec: Vec::new(),
+                id,
+                ps: parts
+            })
+        }else{
+            Err("invalid parts number")
         }
     }
 
@@ -166,7 +170,7 @@ use core::sync::atomic;
         let ic = InternalCheck::new(STR, &mut cp);
         let ic_1 = InternalCheck::new(STR, &mut cp_1);
 
-        let mut ics : ICS<MEXSIZE>= ICS::new(1, 1);
+        let mut ics : ICS<MEXSIZE>= ICS::new(1, 1).unwrap();
         ics.add_internal_check(ic);
         ics.add_internal_check(ic_1);
 
