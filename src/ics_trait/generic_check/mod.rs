@@ -9,13 +9,13 @@ pub trait GenericCheck<'a> {
     fn get_status(&self) -> ErrStatus;
 }
 
-pub trait ObjectCheck {
-    fn check(&self) -> bool;
-    fn manage_fail(&mut self) -> ();
-    fn restore_fail(&mut self) -> ();
-}
-
 pub trait MexConseguence{
     fn manage_fail(&mut self) -> ();
     fn restore_fail(&mut self) -> ();
 }
+
+pub trait ObjectCheck : MexConseguence{
+    fn check(&self) -> bool;
+}
+
+

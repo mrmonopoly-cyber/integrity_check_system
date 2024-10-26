@@ -143,7 +143,8 @@ impl<'a,const S: usize> ICS<'a,S> {
 #[allow(unused)]
 #[cfg(test)]
 mod test{
-    use core::sync::atomic;
+    use crate::debug_check::*;
+use core::sync::atomic;
     use external::ICSDep;
     use ics_mex::ICSMex;
     use internal::InternalCheck;
@@ -154,22 +155,29 @@ mod test{
     use core::sync::atomic::Ordering;
 
     const MEXSIZE : usize= 8;
-
-    fn check_f(p: &AtomicI8) -> bool {
-        p.load(Ordering::Relaxed) >= 0
-    }
-
-    fn fail_f(p: &AtomicI8) {
-        p.store(-1, Ordering::Relaxed);
-    }
-
-    fn rest_f(p: &AtomicI8) {
-        p.store(0, Ordering::Relaxed);
-    }
+    const STR: &str= "internal_check_test";
 
     #[test]
     fn create_ics() {
-        todo!()
+        let p = atomic::AtomicU8::new(18);
+        let p_1 = atomic::AtomicU8::new(0);
+        let mut cp : CheckU8<0, 20, 22, 10> = CheckU8::new(&p);
+        let mut cp_1 : CheckU8<0, 10, 15, 0> = CheckU8::new(&p_1);
+        let ic = InternalCheck::new(STR, &mut cp);
+        let ic_1 = InternalCheck::new(STR, &mut cp_1);
+
+        let mut ics : ICS<MEXSIZE>= ICS::new(1, 1);
+        ics.add_internal_check(ic);
+        ics.add_internal_check(ic_1);
+
+        ics.internal_check();
+        let res = ics.create_ics_messages();
+
+        assert_eq!(ics.id,1);
+        assert_eq!(ics.ps,1);
+        for m in res{
+            assert_eq!(m.check_err(None),false);
+        }
     }
 
     #[test]

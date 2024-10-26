@@ -54,7 +54,10 @@ impl<'a> InternalCheck<'a> where{
 #[cfg(test)]
 mod test{
     use core::sync::atomic;
-    use crate::ics_trait::generic_check:: ObjectCheck;
+    use crate::debug_check::{CheckU8,CheckVr};
+    use crate::ics_trait::generic_check::MexConseguence;
+    use crate::ics_trait::{generic_check:: ObjectCheck};
+    use crate::ics_trait::internal::*;
     static STR: &str= "internal_check_test";
 
     fn run_test(check_seq: &[(usize,usize)]){
@@ -81,6 +84,16 @@ mod test{
 
     #[test]
     fn valid_description(){
-        todo!()
+        let p = atomic::AtomicU8::new(18);
+        let p_1 = atomic::AtomicU8::new(0);
+        let mut cp : CheckU8<0, 20, 22, 10> = CheckU8::new(&p);
+        let mut cp_1 : CheckU8<0, 10, 15, 0> = CheckU8::new(&p_1);
+        let mut cs = CheckVr::new("hello");
+        let ic = InternalCheck::new(STR, &mut cp);
+        let ic_1 = InternalCheck::new(STR, &mut cp_1);
+        let ic_2 = InternalCheck::new(STR, &mut cs);
+        cs.update("fail");
+        assert_eq!(ic.get_description(),STR);
+        assert_eq!(ic_1.get_description(),STR);
     }
 }
