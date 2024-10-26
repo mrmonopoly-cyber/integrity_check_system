@@ -1,7 +1,9 @@
+use crate::err_map::ErrMap;
 use super::ics_trait::internal::*;
 use super::ics_trait::generic_check::GenericCheck;
 use super::ics_trait::external::ICSDep;
 use super::ics_trait::ics_mex::ICSMex;
+
 use alloc::vec::Vec;
 use alloc::boxed::Box;
 use core::result;
@@ -20,54 +22,60 @@ pub struct ICSError<'a>{
 }
 
 #[allow(unused)]
-pub struct ICS<'a,const S:usize>{
+pub struct ICS<'a,M,const S:usize> where 
+M : ErrMap{
     int_vec: Vec<InternalCheck<'a>>,
     ext_vec: Vec<ICSDep<'a,S>>,
+    err_map: M,
     id: usize,
-    ps: usize,
 }
 
 #[allow(unused)]
-impl<'a,const S: usize> ICS<'a,S> {
-    pub fn new(id:usize, parts: usize) -> Result<Self,&'a str> {
-        if parts > 0 {
-            Ok(Self {
-                int_vec: Vec::new(),
-                ext_vec: Vec::new(),
-                id,
-                ps: parts
-            })
-        }else{
-            Err("invalid parts number")
-        }
+impl<'a,M,const S: usize> ICS<'a,M,S> where 
+M : ErrMap{
+    pub fn new(id:usize) -> Result<Self,&'a str> {
+        Ok(Self {
+            int_vec: Vec::new(),
+            ext_vec: Vec::new(),
+            err_map: M::new(),
+            id,
+        })
     }
 
     pub fn with_capacity(
         int_err_cap: usize, 
         ext_err_cap: usize, 
         error_cap: usize, 
-        id:usize, 
-        parts: usize) -> Self {
+        id:usize) -> Self {
         let ie = Vec::with_capacity(int_err_cap);
         let ee = Vec::with_capacity(ext_err_cap);
-        Self {int_vec: ie,ext_vec: ee, id, ps: parts}
+        Self {int_vec: ie,ext_vec: ee, err_map: M::new(),id}
     }
 
-    pub fn full_spec(
-        id:usize, parts: usize,
-        int_vec: Vec<InternalCheck<'a>>, ext_vec: Vec<ICSDep<'a,S>>) -> Self{
+    pub fn full_spec(id:usize, int_vec: Vec<InternalCheck<'a>>, ext_vec: Vec<ICSDep<'a,S>>) -> Self{
         Self{
-            id,ps:parts, int_vec,ext_vec
+            id, int_vec,ext_vec,err_map: M::new(),
         }
     }
 
-    pub fn add_internal_check(&mut self, check: InternalCheck<'a>){
-        self.int_vec.push(check);
+    pub fn add_internal_check(&mut self, check: InternalCheck<'a>, err_index: usize)-> Result<(), (usize, &str)>{
+        match self.err_map.insert_err(err_index){
+            Ok(_) => {
+                self.int_vec.push(check);
+                Ok(())
+            },
+            e => e
+        }
     }
 
-    pub fn add_external_check(&mut self, check: ICSDep<'a,S>) -> usize{
-        self.ext_vec.push(check);
-        self.ext_vec.len() -1
+    pub fn add_external_check(&mut self, check: ICSDep<'a,S>, err_index: usize) -> Result<(),(usize,&'a str)>{
+        match self.err_map.insert_err(err_index){
+            Ok(_) => {
+                self.ext_vec.push(check);
+                Ok(())
+            },
+            e => e
+        }
     }
 
     pub fn internal_check(&mut self) {
@@ -147,8 +155,9 @@ impl<'a,const S: usize> ICS<'a,S> {
 #[allow(unused)]
 #[cfg(test)]
 mod test{
+    use crate::err_map::bst::Bst;
     use crate::debug_check::*;
-use core::sync::atomic;
+    use core::sync::atomic;
     use external::ICSDep;
     use ics_mex::ICSMex;
     use internal::InternalCheck;
@@ -170,15 +179,14 @@ use core::sync::atomic;
         let ic = InternalCheck::new(STR, &mut cp);
         let ic_1 = InternalCheck::new(STR, &mut cp_1);
 
-        let mut ics : ICS<MEXSIZE>= ICS::new(1, 1).unwrap();
-        ics.add_internal_check(ic);
-        ics.add_internal_check(ic_1);
+        let mut ics : ICS<Bst,MEXSIZE>= ICS::new(1).unwrap();
+        ics.add_internal_check(ic,0);
+        ics.add_internal_check(ic_1,1);
 
         ics.internal_check();
         let res = ics.create_ics_messages();
 
         assert_eq!(ics.id,1);
-        assert_eq!(ics.ps,1);
         for m in res{
             assert_eq!(m.check_err(None),false);
         }
