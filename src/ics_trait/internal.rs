@@ -54,7 +54,7 @@ impl<'a> InternalCheck<'a> where{
 #[cfg(test)]
 mod test{
     use core::sync::atomic;
-    use crate::debug_check::{CheckU8,CheckVr};
+    use crate::debug_check::{CheckU8,CheckVr, CheckWithEnv};
     use crate::ics_trait::generic_check::MexConseguence;
     use crate::ics_trait::{generic_check:: ObjectCheck};
     use crate::ics_trait::internal::*;
@@ -93,8 +93,14 @@ mod test{
     fn valid_description(){
         let p = atomic::AtomicU8::new(18);
         let p_1 = atomic::AtomicU8::new(0);
+        let p_2 = atomic::AtomicU8::new(5);
         let mut cp : CheckU8<0, 20, 22, 10> = CheckU8::new(&p);
         let mut cp_1 : CheckU8<0, 10, 15, 0> = CheckU8::new(&p_1);
+
+        let check_f = || true;
+        let fail_f = || ();
+        let restore_f = || ();
+        let mut cp_1  = CheckWithEnv::new(&p_2, check_f, fail_f, restore_f);
         let mut cs = CheckVr::new("hello");
         let ic = InternalCheck::new(STR, &mut cp);
         let ic_1 = InternalCheck::new(STR, &mut cp_1);

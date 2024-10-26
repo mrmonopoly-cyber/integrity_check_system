@@ -1,6 +1,51 @@
 use crate::ics_trait::generic_check::*;
 use core::sync::atomic;
 
+#[allow(unused)]
+#[derive(Debug)]
+pub struct CheckWithEnv<'a,FC,FF,FR> where 
+FC : Fn () -> bool,
+FF : FnMut () -> (),
+FR : FnMut () -> (),{
+    v: &'a atomic::AtomicU8,
+    check_f: FC,
+    fail_f : FF,
+    restore_f : FR,
+}
+
+impl<'a,FC,FF,FR> ObjectCheck for CheckWithEnv<'a,FC,FF,FR>where 
+FC : Fn () -> bool,
+FF : FnMut () -> (),
+FR : FnMut () -> (),{
+    fn check(&self) -> bool {
+        self.v.load(atomic::Ordering::Relaxed) < 10 && (self.check_f)()
+    }
+}
+
+impl<'a,FC,FF,FR> MexConseguence for CheckWithEnv<'a,FC,FF,FR> where 
+FC : Fn () -> bool,
+FF : FnMut () -> (),
+FR : FnMut () -> (),{
+    fn manage_fail(&mut self) -> () {
+        self.v.store(9, atomic::Ordering::Relaxed);
+        (self.fail_f)();
+    }
+
+    fn restore_fail(&mut self) -> () {
+        todo!()
+    }
+}
+
+#[allow(unused)]
+impl<'a,FC,FF,FR> CheckWithEnv<'a,FC,FF,FR> where 
+FC : Fn () -> bool,
+FF : FnMut () -> (),
+FR : FnMut () -> (),{
+    pub fn new(v: &'a atomic::AtomicU8, check_f: FC, fail_f : FF, restore_f: FR) -> Self{
+        Self{v,check_f,fail_f,restore_f}
+    }
+}
+
 #[derive(Debug)]
 pub struct CheckU8<'a,const MIN :u8,const MAX : u8,const FV:u8,const DF: u8> {
     vp : &'a atomic::AtomicU8,
