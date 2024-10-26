@@ -60,8 +60,15 @@ mod test{
     use crate::ics_trait::internal::*;
     static STR: &str= "internal_check_test";
 
-    fn run_test(check_seq: &[(usize,usize)]){
-        todo!()
+    fn run_test(check_seq: &[(u8,u8)]){
+        let p = atomic::AtomicU8::new(18);
+        let mut cp : CheckU8<0, 10, 99, 9> = CheckU8::new(&p);
+        let mut ic = InternalCheck::new(STR, &mut cp);
+        for (before,after) in check_seq.iter(){
+            p.store(*before, atomic::Ordering::Relaxed);
+            ic.run_check();
+            assert_eq!(p.load(atomic::Ordering::Relaxed),*after);
+        }
     }
 
     #[test]

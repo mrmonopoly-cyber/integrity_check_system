@@ -75,14 +75,6 @@ mod test{
     const PART : usize = 0;
     const ERR_IDX: usize = 0;
 
-    fn fail_f(p: &AtomicI8) {
-        p.store(-1, Ordering::Relaxed);
-    }
-
-    fn rest_f(p: &AtomicI8) {
-        p.store(0, Ordering::Relaxed);
-    }
-
     #[test]
     fn create_dep() {
         todo!()
