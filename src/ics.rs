@@ -117,37 +117,19 @@ M : ErrMap{
     }
 
     pub fn create_ics_messages(&self) -> Box<[ICSMex<S>]>{
+        let int_check_num = self.int_vec.len();
+        let ext_check_num = self.ext_vec.len();
+        let tot_check = int_check_num + ext_check_num;
 
-        fn test_ch<'a,C: GenericCheck<'a>, const S:usize>
-            (res: &mut Vec<ICSMex<S>>,cl: &Vec<C>,bit_s: &mut u8,mex_part: &mut usize,id:usize){
-            for int_check in cl.iter(){
-                if  usize::from(*bit_s) >= 8 * S {
-                    res.push(ICSMex::new(id, *mex_part));
-                    *mex_part+=1;
-                    *bit_s =0;
-                }
+        let mut res : Vec<ICSMex<S>> = Vec::with_capacity(tot_check/S);
 
-                match int_check.get_status(){
-                    crate::ics_trait::generic_check::ErrStatus::ERR =>{
-                        res[*mex_part].set_err(usize::from(*bit_s/8), *bit_s%8);
-                    },
-                    _ => (),
-                };
+        for i in 0..tot_check{
+            let mex_part = i/S*8;
+            let err_pos = i/S;
+            let bit_pos : u8 =  u8::try_from(i%8).ok().unwrap();
+            res[mex_part].set_err(err_pos, bit_pos);
+        };
 
-                *bit_s+=1;
-            }
-        }
-
-        let tot_bit = self.ext_vec.len() + self.int_vec.len();
-        let tot_byte = tot_bit/8 + tot_bit % 2;
-        let tot_array = tot_byte / S + tot_byte%2;
-        let mut res = Vec::with_capacity(tot_array);
-        let mut bit_s : u8= 0;
-        let mut mex_part = 0;
-
-        res.push(ICSMex::new(self.id, mex_part));
-        test_ch(&mut res, &self.int_vec, &mut bit_s, &mut mex_part, self.id);
-        test_ch(&mut res, &self.ext_vec, &mut bit_s, &mut mex_part, self.id);
         res.into_boxed_slice()
     }
 }

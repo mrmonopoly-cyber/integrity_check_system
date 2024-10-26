@@ -47,12 +47,12 @@ impl<const S:usize> ICSMex<S>
     }
 
     pub fn set_err(&mut self, idx:usize, bit: u8) -> Result<(),&str>{
-        let upv = |v: &mut[u8;S]| -> () {v[idx] = v[idx].set_bit(bit)};
+        let upv = |v: &mut[u8;S]| {v[idx] = v[idx].set_bit(bit)};
         self.update_err_vec(idx, bit, upv)
     }
 
     pub fn clear_err(&mut self, idx:usize, bit: u8) -> Result<(),&str> {
-        let upv = |v: &mut[u8;S]| -> () {v[idx] = v[idx].clear_bit(bit)};
+        let upv = |v: &mut[u8;S]| {v[idx] = v[idx].clear_bit(bit)};
         self.update_err_vec(idx, bit, upv)
     }
 
