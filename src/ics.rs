@@ -124,9 +124,10 @@ M : ErrMap{
         let mut res : Vec<ICSMex<S>> = Vec::with_capacity(tot_check/S);
 
         for i in 0..tot_check{
-            let mex_part = i/S*8;
-            let err_pos = i/S;
-            let bit_pos : u8 =  u8::try_from(i%8).ok().unwrap();
+            let mex_part = i/(S*8);
+            let i_buffer = i - mex_part * S;
+            let err_pos = i_buffer/S;
+            let bit_pos : u8 =  u8::try_from(err_pos%8).ok().unwrap();
             res[mex_part].set_err(err_pos, bit_pos);
         };
 
