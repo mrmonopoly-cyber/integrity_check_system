@@ -117,21 +117,7 @@ M : ErrMap{
     }
 
     pub fn create_ics_messages(&self) -> Box<[ICSMex<S>]>{
-        let int_check_num = self.int_vec.len();
-        let ext_check_num = self.ext_vec.len();
-        let tot_check = int_check_num + ext_check_num;
-
-        let mut res : Vec<ICSMex<S>> = Vec::with_capacity(tot_check/S);
-
-        for i in 0..tot_check{
-            let mex_part = i/(S*8);
-            let i_buffer = i - mex_part * S;
-            let err_pos = i_buffer/S;
-            let bit_pos : u8 =  u8::try_from(err_pos%8).ok().unwrap();
-            res[mex_part].set_err(err_pos, bit_pos);
-        };
-
-        res.into_boxed_slice()
+        todo!()
     }
 }
 
@@ -141,6 +127,7 @@ mod test{
     use crate::err_map::bst::Bst;
     use crate::debug_check::*;
     use core::sync::atomic;
+    use std::sync::atomic::AtomicU8;
     use external::ICSDep;
     use ics_mex::ICSMex;
     use internal::InternalCheck;
@@ -155,17 +142,7 @@ mod test{
 
     #[test]
     fn create_ics() {
-        let p = atomic::AtomicU8::new(18);
-        let p_1 = atomic::AtomicU8::new(0);
-        let mut cp : CheckU8<0, 20, 22, 10> = CheckU8::new(&p);
-        let mut cp_1 : CheckU8<0, 10, 15, 0> = CheckU8::new(&p_1);
-        let ic = InternalCheck::new(STR, &mut cp);
-        let ic_1 = InternalCheck::new(STR, &mut cp_1);
-
         let mut ics : ICS<Bst,MEXSIZE>= ICS::new(1).unwrap();
-        ics.add_internal_check(ic,0);
-        ics.add_internal_check(ic_1,1);
-
         ics.internal_check();
         let res = ics.create_ics_messages();
 
@@ -177,11 +154,42 @@ mod test{
 
     #[test]
     fn locate_internal_fail() {
-        todo!()
+        let mut ics : ICS<Bst, MEXSIZE> = ICS::new(12).unwrap();
+
+        let at_u8 = AtomicU8::new(12);
+        let mut che_u8 :CheckU8<0, 15, 99, 0> = CheckU8::new(&at_u8);
+        let it_ch = InternalCheck::new(STR, &mut che_u8);
+
+        ics.add_internal_check(it_ch, 1);
+        at_u8.store(101, Ordering::Relaxed);
+        ics.internal_check();
+        let mex = ics.create_ics_messages();
+        let mut i = 0;
+        for m in mex.iter(){
+            i+=1;
+            assert_eq!(m.check_err(None),true);
+        }
+        assert_eq!(i,1);
     }
 
     #[test]
     fn locate_external_fail_spec_mex() {
+        let mut ics : ICS<Bst, MEXSIZE> = ICS::new(12).unwrap();
+
+        let at_u8 = AtomicU8::new(12);
+        let mut che_u8 :CheckU8<0, 15, 99, 0> = CheckU8::new(&at_u8);
+        let it_ch = InternalCheck::new(STR, &mut che_u8);
+
+        ics.add_internal_check(it_ch, 1);
+        at_u8.store(101, Ordering::Relaxed);
+        ics.internal_check();
+        let mex = ics.create_ics_messages();
+        let mut i = 0;
+        for m in mex.iter(){
+            i+=1;
+            assert_eq!(m.check_err( Some(1) ),true);
+        }
+        assert_eq!(i,1);
         todo!()
     }
 
