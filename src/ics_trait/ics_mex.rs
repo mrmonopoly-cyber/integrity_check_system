@@ -10,11 +10,6 @@ pub struct ICSMex<const S: usize> {
 }
 
 impl<const S:usize> ICSMex<S> {
-
-    pub fn new(id:usize, part: usize, err_vec: [u8;S] ) -> Self{
-        Self{id,err_vec,part}
-    }
-
     pub fn check_error(&self, err_index: Option<usize>) -> bool{
         match err_index{
             None => {
@@ -108,9 +103,9 @@ impl<const S:usize> ICSMexFull<S>
         self.parts.iter()
     }
 
-    pub fn get_part(&self, part: usize) -> Result<&ICSMex<S>,(usize,&str)>{
+    pub fn get_part(&mut self, part: usize) -> Result<&mut ICSMex<S>,(usize,&str)>{
         if part < self.parts.len(){
-            return Ok(&self.parts[part])
+            return Ok(&mut self.parts[part])
         }
         Err((part,"invalid part index"))
     }
