@@ -148,7 +148,7 @@ mod test{
 
         assert_eq!(ics.id,1);
         for m in res{
-            assert_eq!(m.check_err(None),false);
+            assert_eq!(m.check_error(None),false);
         }
     }
 
@@ -167,7 +167,7 @@ mod test{
         let mut i = 0;
         for m in mex.iter(){
             i+=1;
-            assert_eq!(m.check_err(None),true);
+            assert_eq!(m.check_error(None),true);
         }
         assert_eq!(i,1);
     }
@@ -187,7 +187,7 @@ mod test{
         let mut i = 0;
         for m in mex.iter(){
             i+=1;
-            assert_eq!(m.check_err( Some(1) ),true);
+            assert_eq!(m.check_error( Some(1) ),true);
         }
         assert_eq!(i,1);
         todo!()

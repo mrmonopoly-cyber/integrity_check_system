@@ -45,7 +45,7 @@ impl<'a,const S:usize> ICSDep<'a,S>{
     pub fn check_mex(&mut self, mex: &ICSMex<S>) -> result::Result<ErrStatus,&str>
     {
         if  mex.same_id_part(self.id, self.part) {
-            match (mex.check_err(self.error_idx),&self.status){
+            match (mex.check_error(self.error_idx),&self.status){
                 (true, ErrStatus::OK) => {
                     self.fail_par.manage_fail();
                     self.status = ErrStatus::ERR;
