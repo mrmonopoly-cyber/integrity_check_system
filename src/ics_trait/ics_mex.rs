@@ -1,18 +1,30 @@
+use alloc::vec::Vec;
 use bit_ops::BitOps;
 use core::result::Result;
 
 #[derive(Debug)]
 pub struct ICSMex<const S: usize> {
-    num_errors: usize,
     id: usize,
     part: usize,
     err_vec: [u8;S],
 }
 
 impl<const S:usize> ICSMex<S> {
+
+    pub fn new(id:usize, part: usize, err_vec: [u8;S] ) -> Self{
+        Self{id,err_vec,part}
+    }
+
     pub fn check_error(&self, err_index: Option<usize>) -> bool{
         match err_index{
-            None => self.num_errors > 0,
+            None => {
+                for e in &self.err_vec{
+                    if *e > 0{
+                        return true;
+                    }
+                }
+                false
+            },
             Some(i) =>{
                 let clean_index = {
                     let other_pack_buff = self.part * S * 8;
@@ -32,15 +44,14 @@ impl<const S:usize> ICSMex<S> {
         }
     }
 
-    pub fn same_id_part(&self,id:usize,part:usize) -> bool {
-        self.id == id && self.part == part
+    pub const fn same_id(&self,id:usize) -> bool {
+        self.id == id
     }
 
     pub fn set_err(&mut self,cell_idx: usize, bit_id: u8) -> Result<(),()>{
         if  cell_idx < S && bit_id < 8{
             let c = &mut self.err_vec[cell_idx];
             *c = c.set_bit(bit_id);
-            self.num_errors+=1;
             return Ok(())
         }
         Err(())
@@ -50,7 +61,6 @@ impl<const S:usize> ICSMex<S> {
         if  cell_idx < S && bit_id < 8{
             let c = &mut self.err_vec[cell_idx];
             *c = c.clear_bit(bit_id);
-            self.num_errors-=1;
             return Ok(())
         }
         Err(())
@@ -87,11 +97,15 @@ impl<const S:usize> ICSMexFull<S>
         let parts = {
             let mut res = Vec::with_capacity(num_packets);
             for i in 0..num_packets{
-                res.push(ICSMex{id,num_errors: 0, part: i,err_vec: [0;S]});
+                res.push(ICSMex{id, part: i,err_vec: [0;S]});
             }
             res
         };
         Self{parts}
+    }
+
+    pub fn iter(&self) -> core::slice::Iter<ICSMex<S>>{
+        self.parts.iter()
     }
 
     pub fn get_part(&self, part: usize) -> Result<&ICSMex<S>,(usize,&str)>{

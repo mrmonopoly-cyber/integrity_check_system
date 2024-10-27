@@ -1,3 +1,4 @@
+use alloc::boxed::Box;
 use super::ErrMap;
 
 #[derive(Debug)]

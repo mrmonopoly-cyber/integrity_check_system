@@ -1,11 +1,12 @@
 use crate::err_map::ErrMap;
+use crate::ics_trait::generic_check::ErrStatus;
+use crate::ics_trait::ics_mex::ICSMexFull;
 use super::ics_trait::internal::*;
 use super::ics_trait::generic_check::GenericCheck;
 use super::ics_trait::external::ICSDep;
 use super::ics_trait::ics_mex::ICSMex;
 
 use alloc::vec::Vec;
-use alloc::boxed::Box;
 use core::result;
 
 #[derive(Debug,Clone)]
@@ -24,8 +25,8 @@ pub struct ICSError<'a>{
 #[allow(unused)]
 pub struct ICS<'a,M,const S:usize> where 
 M : ErrMap{
-    int_vec: Vec<InternalCheck<'a>>,
-    ext_vec: Vec<ICSDep<'a,S>>,
+    int_vec: Vec<(usize,InternalCheck<'a>)>,
+    ext_vec: Vec<(usize,ICSDep<'a,S>)>,
     err_map: M,
     id: usize,
 }
@@ -52,7 +53,8 @@ M : ErrMap{
         Self {int_vec: ie,ext_vec: ee, err_map: M::new(),id}
     }
 
-    pub fn full_spec(id:usize, int_vec: Vec<InternalCheck<'a>>, ext_vec: Vec<ICSDep<'a,S>>) -> Self{
+    pub fn full_spec(id:usize, int_vec: Vec<(usize,InternalCheck<'a>)>, 
+        ext_vec: Vec<(usize,ICSDep<'a,S>)>) -> Self{
         Self{
             id, int_vec,ext_vec,err_map: M::new(),
         }
@@ -61,7 +63,7 @@ M : ErrMap{
     pub fn add_internal_check(&mut self, check: InternalCheck<'a>, err_index: usize)-> Result<(), (usize, &str)>{
         match self.err_map.insert_err(err_index){
             Ok(_) => {
-                self.int_vec.push(check);
+                self.int_vec.push((err_index,check));
                 Ok(())
             },
             e => e
@@ -71,7 +73,7 @@ M : ErrMap{
     pub fn add_external_check(&mut self, check: ICSDep<'a,S>, err_index: usize) -> Result<(),(usize,&'a str)>{
         match self.err_map.insert_err(err_index){
             Ok(_) => {
-                self.ext_vec.push(check);
+                self.ext_vec.push((err_index,check));
                 Ok(())
             },
             e => e
@@ -79,13 +81,13 @@ M : ErrMap{
     }
 
     pub fn internal_check(&mut self) {
-        for int_check in &mut self.int_vec{
+        for (_,int_check) in &mut self.int_vec{
             int_check.run_check();
         }
     }
 
     pub fn check_general_mex(&mut self, mex: &ICSMex<S>){
-        for cond in self.ext_vec.iter_mut() {
+        for (_,cond) in self.ext_vec.iter_mut() {
             cond.check_mex(mex);
         };
     }
@@ -96,15 +98,15 @@ M : ErrMap{
             return Err("invalid index range fir ext_vec")
         }
 
-        let ext_check = &mut self.ext_vec[ext_err_index];
+        let (_,ext_check) = &mut self.ext_vec[ext_err_index];
         ext_check.check_mex(mex);
         Ok(())
     }
 
     pub fn get_err_info(&'a self,err_type: ErrorType, err_index: usize) -> Option<&str> {
-        fn get_dscr<'a,G: GenericCheck<'a>>(vc : &'a Vec<G>, idx: usize) -> Option<&'a str>{
+        fn get_dscr<'a,G: GenericCheck<'a>>(vc : &'a Vec<(usize,G)>, idx: usize) -> Option<&'a str>{
                 if idx < vc.len(){
-                    let err = &vc[idx];
+                    let (_,err) = &vc[idx];
                     Some(err.get_description())
                 }else{
                     None
@@ -116,8 +118,22 @@ M : ErrMap{
         }
     }
 
-    pub fn create_ics_messages(&self) -> Box<[ICSMex<S>]>{
-        todo!()
+    pub fn create_ics_messages(&mut self) -> ICSMexFull<S>{
+        let err_num = self.int_vec.len() + self.ext_vec.len();
+        let mut r = ICSMexFull::new(self.id, err_num);
+        for (err_index,int_err) in self.int_vec.iter_mut(){
+            if int_err.run_check() == ErrStatus::ERR{
+                r.set_err(*err_index);
+            }
+        }
+
+        for (err_index,ext_err) in self.ext_vec.iter_mut(){
+            if ext_err.get_status() == ErrStatus::ERR{
+                r.set_err(*err_index);
+            }
+        }
+
+        r
     }
 }
 
@@ -127,7 +143,7 @@ mod test{
     use crate::err_map::bst::Bst;
     use crate::debug_check::*;
     use core::sync::atomic;
-    use std::sync::atomic::AtomicU8;
+    use core::sync::atomic::AtomicU8;
     use external::ICSDep;
     use ics_mex::ICSMex;
     use internal::InternalCheck;
@@ -147,7 +163,7 @@ mod test{
         let res = ics.create_ics_messages();
 
         assert_eq!(ics.id,1);
-        for m in res{
+        for m in res.iter(){
             assert_eq!(m.check_error(None),false);
         }
     }
@@ -190,11 +206,25 @@ mod test{
             assert_eq!(m.check_error( Some(1) ),true);
         }
         assert_eq!(i,1);
-        todo!()
     }
 
     #[test]
     fn locate_external_fail_general_mex() {
-        todo!()
+        let mut ics : ICS<Bst, MEXSIZE> = ICS::new(12).unwrap();
+
+        let at_u8 = AtomicU8::new(12);
+        let mut che_u8 :CheckU8<0, 15, 99, 0> = CheckU8::new(&at_u8);
+        let it_ch = InternalCheck::new(STR, &mut che_u8);
+
+        ics.add_internal_check(it_ch, 1);
+        at_u8.store(101, Ordering::Relaxed);
+        ics.internal_check();
+        let mex = ics.create_ics_messages();
+        let mut i = 0;
+        for m in mex.iter(){
+            i+=1;
+            assert_eq!(m.check_error( None ),true);
+        }
+        assert_eq!(i,1);
     }
 }
