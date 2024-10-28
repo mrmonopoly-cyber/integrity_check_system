@@ -3,6 +3,7 @@ use crate::ics_trait::generic_check::{ErrStatus,GenericCheck};
 use super::generic_check::ObjectCheck;
 
 #[allow(unused)]
+#[derive(Debug)]
 pub struct InternalCheck<'a>{
     volatile_par: &'a mut dyn ObjectCheck,
     description: &'a str,

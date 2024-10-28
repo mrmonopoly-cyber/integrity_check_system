@@ -1,3 +1,5 @@
+use core::fmt::Debug;
+
 #[derive(Debug,PartialEq,Clone)]
 pub enum ErrStatus{
     OK,
@@ -10,7 +12,7 @@ pub trait GenericCheck<'a> {
     fn get_status(&self) -> ErrStatus;
 }
 
-pub trait MexConseguence{
+pub trait MexConseguence: Debug{
     fn manage_fail(&mut self) -> ();
     fn restore_fail(&mut self) -> ();
 }

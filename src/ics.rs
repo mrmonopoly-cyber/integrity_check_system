@@ -24,6 +24,7 @@ pub struct ICSError<'a>{
 }
 
 #[allow(unused)]
+#[derive(Debug)]
 pub struct ICS<'a,M,const S:usize,TID> 
 where 
     M : ErrMap,

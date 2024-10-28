@@ -1,22 +1,39 @@
 use crate::ics_trait::generic_check::*;
-use core::sync::atomic;
+use core::{fmt::Debug, sync::atomic};
 
 #[allow(unused)]
-#[derive(Debug)]
 pub struct CheckWithEnv<'a,FC,FF,FR> where 
 FC : Fn () -> bool,
 FF : FnMut () -> (),
-FR : FnMut () -> (),{
+FR : FnMut () -> (),
+{
     v: &'a atomic::AtomicU8,
     check_f: FC,
     fail_f : FF,
     restore_f : FR,
 }
 
+impl<'a,FC,FF,FR> Debug for CheckWithEnv<'a,FC,FF,FR>where 
+FC : Fn () -> bool,
+FF : FnMut () -> (),
+FR : FnMut () -> (),
+{
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        f.debug_struct("CheckWithEnv")
+            .field("v", &self.v)
+            .field("check_f", &"<function>")
+            .field("fail_f", &"<function>")
+            .field("restore_f", &"<function>")
+            .finish()
+    }
+}
+
+
 impl<'a,FC,FF,FR> ObjectCheck for CheckWithEnv<'a,FC,FF,FR>where 
 FC : Fn () -> bool,
 FF : FnMut () -> (),
-FR : FnMut () -> (),{
+FR : FnMut () -> (),
+{
     fn check(&self) -> bool {
         self.v.load(atomic::Ordering::Relaxed) < 10 && (self.check_f)()
     }
@@ -25,7 +42,8 @@ FR : FnMut () -> (),{
 impl<'a,FC,FF,FR> MexConseguence for CheckWithEnv<'a,FC,FF,FR> where 
 FC : Fn () -> bool,
 FF : FnMut () -> (),
-FR : FnMut () -> (),{
+FR : FnMut () -> (),
+{
     fn manage_fail(&mut self) -> () {
         self.v.store(9, atomic::Ordering::Relaxed);
         (self.fail_f)();
@@ -40,7 +58,8 @@ FR : FnMut () -> (),{
 impl<'a,FC,FF,FR> CheckWithEnv<'a,FC,FF,FR> where 
 FC : Fn () -> bool,
 FF : FnMut () -> (),
-FR : FnMut () -> (),{
+FR : FnMut () -> (),
+{
     pub fn new(v: &'a atomic::AtomicU8, check_f: FC, fail_f : FF, restore_f: FR) -> Self{
         Self{v,check_f,fail_f,restore_f}
     }

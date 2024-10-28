@@ -6,6 +6,7 @@ use num::integer::Integer;
 
 
 #[allow(unused)]
+#[derive(Debug)]
 pub struct ICSDep<'a,const S: usize,TID>
 where 
 TID: Integer + Copy,

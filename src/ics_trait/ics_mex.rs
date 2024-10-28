@@ -1,6 +1,7 @@
 use alloc::vec::Vec;
 use bit_ops::BitOps;
 use core::result::Result;
+use core::slice::Iter;
 use num::{integer::Integer, Unsigned};
 
 #[derive(Debug)]
@@ -14,9 +15,25 @@ TPART: Copy + Unsigned +  Into<usize> + TryFrom<usize>
 }
 
 impl<const S:usize,TID,TPART> ICSMex<S,TID,TPART> where  
-TID: Integer,
+TID: Integer + Copy,
 TPART: Copy + Unsigned +  Into<usize> + TryFrom<usize>
 {
+    pub fn new(id:TID,part:TPART, err_vec: [u8;S]) -> Self{
+        Self { id,part, err_vec }
+    }
+
+    pub fn id(&self) -> TID{
+        self.id
+    }
+
+    pub fn part(&self) -> TPART{
+        self.part
+    }
+
+    pub fn iter_data(&self) -> Iter<u8> {
+        self.err_vec.iter()
+    }
+
     pub fn check_error(&self, err_index: Option<usize>) -> bool{
         match err_index{
             None => {
@@ -124,7 +141,7 @@ TPART: Copy + Unsigned +  Into<usize> + TryFrom<usize>
     pub fn set_err(&mut self, err_idx: usize) -> Result<(),(&str,usize)>{
         fn up_f<const S: usize,TID,TPART>(se: &mut ICSMex<S,TID,TPART>,reg_idx: usize,bit_index: u8)
         where
-            TID: Integer,
+            TID: Integer + Copy,
             TPART: Copy + Unsigned +  Into<usize> + TryFrom<usize>,
         {
             se.set_err(reg_idx, bit_index);
@@ -135,7 +152,7 @@ TPART: Copy + Unsigned +  Into<usize> + TryFrom<usize>
     pub fn clear_err(&mut self, err_idx:usize) -> Result<(),(&str,usize)> {
         fn up_f<const S: usize,TID,TPART>(se: &mut ICSMex<S,TID,TPART>,reg_idx: usize,bit_index: u8)
         where
-            TID: Integer,
+            TID: Integer + Copy,
             TPART: Copy + Unsigned +  Into<usize> + TryFrom<usize>,
         {
             se.clear_err(reg_idx, bit_index);
