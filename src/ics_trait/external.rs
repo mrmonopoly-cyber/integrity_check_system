@@ -1,7 +1,8 @@
 use super::generic_check::{ErrStatus, GenericCheck, MexConseguence};
 use super::ics_mex::ICSMex;
 use core::result;
-use num::{Integer,FromPrimitive};
+use num::Unsigned;
+use num::integer::Integer;
 
 
 #[allow(unused)]
@@ -32,7 +33,7 @@ TID: Integer + Copy,
 #[allow(unused)]
 impl<'a,const S:usize,TID> ICSDep<'a,S,TID>
 where 
-TID: Integer + Copy,
+TID: Integer +  Copy,
 {
     pub fn new(
         description: &'a str,
@@ -51,7 +52,7 @@ TID: Integer + Copy,
 
     pub fn check_mex<TPART>(&mut self, mex: &ICSMex<S,TID,TPART>) -> result::Result<ErrStatus,&str>
     where 
-    TPART: Copy+  Integer + FromPrimitive + core::ops::Mul<usize, Output = usize> ,
+        TPART: Copy + Unsigned +  Into<usize> + TryFrom<usize>
     {
         if  mex.same_id(self.id) {
             match (mex.check_error(self.error_idx),&self.status){
