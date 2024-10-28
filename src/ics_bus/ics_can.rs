@@ -9,6 +9,7 @@ use crate::err_map::ErrMap;
 use crate::ics_trait::ics_mex::ICSMex;
 use can::frame::Frame;
 use can::{frame,identifier};
+use can::identifier::{Id, StandardId};
 
 const ICS_PAYLOAD_SIZE : usize = 7;
 type IcsPartType = u8;
@@ -25,9 +26,10 @@ pub struct ICSCan<'a,M:ErrMap> {
 
 impl<'a,M: ErrMap> ICSCan<'a,M>
 {
-    pub fn new(ics_can_id: identifier::Id, ics_internal_id: u8, send_f: SendCanFun) -> Self
+    pub fn new(ics_can_id: u16, ics_internal_id: u8, send_f: SendCanFun) -> Self
     {
         let ics : ICS<'a,M,ICS_PAYLOAD_SIZE,u8> = ICS::new(ics_internal_id).ok().unwrap();
+        let ics_can_id = Id::Standard(StandardId::new(ics_can_id).unwrap());
 
         Self{ics,can_id: ics_can_id,send_f}
     }
@@ -106,5 +108,21 @@ impl<'a,M: ErrMap> ICSCan<'a,M>
         }else{
             Err(())
         }
+    }
+}
+
+#[cfg(test)]
+mod test{
+    use crate::err_map::bst::Bst;
+    use super::ICSCan;
+    use can::frame::Frame;
+    use can::identifier::{Id,StandardId};
+
+    #[test]
+    fn create_test() {
+        let send_f = |_mex: &Frame| -> Result<(),()> {Ok(())};
+        let ics_can : ICSCan<Bst> = ICSCan::new(2, 1, send_f);
+
+        assert_eq!(ics_can.can_id,Id::Standard(StandardId::new(2).unwrap()));
     }
 }
