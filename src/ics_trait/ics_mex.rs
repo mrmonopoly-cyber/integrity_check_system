@@ -18,23 +18,28 @@ impl<const S:usize,TID,TPART> ICSMex<S,TID,TPART> where
 TID: Integer + Copy,
 TPART: Copy + Unsigned +  Into<usize> + TryFrom<usize>
 {
-    pub fn new(id:TID,part:TPART, err_vec: [u8;S]) -> Self{
+    pub fn new(id:TID,part:TPART, err_vec: [u8;S]) -> Self
+    {
         Self { id,part, err_vec }
     }
 
-    pub fn id(&self) -> TID{
+    pub fn id(&self) -> TID
+    {
         self.id
     }
 
-    pub fn part(&self) -> TPART{
+    pub fn part(&self) -> TPART
+    {
         self.part
     }
 
-    pub fn iter_data(&self) -> Iter<u8> {
+    pub fn iter_data(&self) -> Iter<u8> 
+    {
         self.err_vec.iter()
     }
 
-    pub fn check_error(&self, err_index: Option<usize>) -> bool{
+    pub fn check_error(&self, err_index: Option<usize>) -> bool
+    {
         match err_index{
             None => {
                 for e in &self.err_vec{
@@ -63,11 +68,13 @@ TPART: Copy + Unsigned +  Into<usize> + TryFrom<usize>
         }
     }
 
-    pub fn same_id(&self,id:TID) -> bool {
+    pub fn same_id(&self,id:TID) -> bool 
+    {
         self.id == id
     }
 
-    pub fn set_err(&mut self,cell_idx: usize, bit_id: u8) -> Result<(),()>{
+    pub fn set_err(&mut self,cell_idx: usize, bit_id: u8) -> Result<(),()>
+    {
         if  cell_idx < S && bit_id < 8{
             let c = &mut self.err_vec[cell_idx];
             *c = c.set_bit(bit_id);
@@ -76,7 +83,8 @@ TPART: Copy + Unsigned +  Into<usize> + TryFrom<usize>
         Err(())
     }
 
-    pub fn clear_err(&mut self,cell_idx: usize, bit_id: u8) -> Result<(),()>{
+    pub fn clear_err(&mut self,cell_idx: usize, bit_id: u8) -> Result<(),()>
+    {
         if  cell_idx < S && bit_id < 8{
             let c = &mut self.err_vec[cell_idx];
             *c = c.clear_bit(bit_id);

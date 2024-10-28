@@ -24,7 +24,8 @@ impl<'a> GenericCheck<'a>  for InternalCheck<'a>{
 
 #[allow(unused)]
 impl<'a> InternalCheck<'a> where{
-    pub fn new(description: &'a str,volatile_par: &'a mut dyn ObjectCheck,) -> Self{
+    pub fn new(description: &'a str,volatile_par: &'a mut dyn ObjectCheck,) -> Self
+    {
         Self{volatile_par,description,status:ErrStatus::OK}
     }
 

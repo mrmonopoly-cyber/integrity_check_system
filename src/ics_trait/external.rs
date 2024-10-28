@@ -1,6 +1,5 @@
 use super::generic_check::{ErrStatus, GenericCheck, MexConseguence};
 use super::ics_mex::ICSMex;
-use core::result;
 use num::Unsigned;
 use num::integer::Integer;
 
@@ -41,7 +40,8 @@ TID: Integer +  Copy,
         id: TID,
         error_idx: Option<usize>,
         fail_par: &'a mut dyn MexConseguence,
-        ) -> Self{
+        ) -> Self
+    {
         ICSDep { 
             description, 
             id, 
@@ -51,7 +51,7 @@ TID: Integer +  Copy,
         }
     }
 
-    pub fn check_mex<TPART>(&mut self, mex: &ICSMex<S,TID,TPART>) -> result::Result<ErrStatus,&str>
+    pub fn check_mex<TPART>(&mut self, mex: &ICSMex<S,TID,TPART>) -> Result<ErrStatus,&str>
     where 
         TPART: Copy + Unsigned +  Into<usize> + TryFrom<usize>
     {

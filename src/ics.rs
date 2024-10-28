@@ -55,20 +55,24 @@ where
         int_err_cap: usize, 
         ext_err_cap: usize, 
         error_cap: usize, 
-        id:TID) -> Self {
+        id:TID) -> Self 
+    {
         let ie = Vec::with_capacity(int_err_cap);
         let ee = Vec::with_capacity(ext_err_cap);
         Self {int_vec: ie,ext_vec: ee, err_map: M::new(),id}
     }
 
     pub fn full_spec(id:TID, int_vec: Vec<(usize,InternalCheck<'a>)>, 
-        ext_vec: Vec<(usize,ICSDep<'a,S,TID>)>) -> Self{
+        ext_vec: Vec<(usize,ICSDep<'a,S,TID>)>) -> Self
+    {
         Self{
             id, int_vec,ext_vec,err_map: M::new(),
         }
     }
 
-    pub fn add_internal_check(&mut self, check: InternalCheck<'a>, err_index: usize)-> Result<(), (usize, &str)>{
+    pub fn add_internal_check(&mut self, check: InternalCheck<'a>, err_index: usize)
+        -> Result<(), (usize, &str)>
+    {
         match self.err_map.insert_err(err_index){
             Ok(_) => {
                 self.int_vec.push((err_index,check));
@@ -78,7 +82,9 @@ where
         }
     }
 
-    pub fn add_external_check(&mut self, check: ICSDep<'a,S,TID>, err_index: usize) -> Result<(),(usize,&'a str)>{
+    pub fn add_external_check(&mut self, check: ICSDep<'a,S,TID>, err_index: usize) 
+        -> Result<(),(usize,&'a str)>
+    {
         match self.err_map.insert_err(err_index){
             Ok(_) => {
                 self.ext_vec.push((err_index,check));
@@ -88,7 +94,8 @@ where
         }
     }
 
-    pub fn internal_check(&mut self) {
+    pub fn internal_check(&mut self) 
+    {
         for (_,int_check) in &mut self.int_vec{
             int_check.run_check();
         }
@@ -117,7 +124,8 @@ where
         Ok(())
     }
 
-    pub fn get_err_info(&'a self,err_type: ErrorType, err_index: usize) -> Option<&str> {
+    pub fn get_err_info(&'a self,err_type: ErrorType, err_index: usize) -> Option<&str> 
+    {
         fn get_dscr<'a,G: GenericCheck<'a>>(vc : &'a Vec<(usize,G)>, idx: usize) -> Option<&'a str>{
                 if idx < vc.len(){
                     let (_,err) = &vc[idx];

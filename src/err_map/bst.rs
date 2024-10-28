@@ -10,8 +10,10 @@ pub struct Bst {
 
 #[allow(unused)]
 impl ErrMap for Bst{
-    fn insert_err<'a>(&mut self,err_num: usize) -> Result<(),(usize,&'a str)> {
-        fn test_node<'a>(n: &mut Option<Box<Bst>>, key: usize) -> Result<(),(usize,&'a str)>{
+    fn insert_err<'a>(&mut self,err_num: usize) -> Result<(),(usize,&'a str)> 
+    {
+        fn test_node<'a>(n: &mut Option<Box<Bst>>, key: usize) -> Result<(),(usize,&'a str)>
+        {
             match n{
                 None => {
                     *n = Some(Box::new(Bst{key:Some(key), max_child:None,min_child:None}));
@@ -40,11 +42,13 @@ impl ErrMap for Bst{
         }
     }
 
-    fn delete_err<'a>(&mut self,err_num: usize) -> Result<(),&'a str> {
+    fn delete_err<'a>(&mut self,err_num: usize) -> Result<(),&'a str> 
+    {
         todo!()
     }
 
-    fn exist_err<'a>(&mut self,err_num: usize) -> bool {
+    fn exist_err<'a>(&mut self,err_num: usize) -> bool 
+    {
         match self.key{
             None => false,
             Some(k) =>{
@@ -65,7 +69,8 @@ impl ErrMap for Bst{
         }
     }
 
-    fn new() -> Self {
+    fn new() -> Self 
+    {
         Self{key: None,max_child: None,min_child: None}
     }
 }
