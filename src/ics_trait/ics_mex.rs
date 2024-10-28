@@ -1,15 +1,22 @@
 use alloc::vec::Vec;
 use bit_ops::BitOps;
 use core::result::Result;
+use num::{Integer,FromPrimitive};
 
 #[derive(Debug)]
-pub struct ICSMex<const S: usize> {
-    id: usize,
-    part: usize,
+pub struct ICSMex<const S: usize,TID,TPART>where 
+TID: Integer,
+TPART: Copy+  Integer + FromPrimitive + core::ops::Mul<usize, Output = usize> ,
+{
+    id: TID,
+    part: TPART,
     err_vec: [u8;S],
 }
 
-impl<const S:usize> ICSMex<S> {
+impl<const S:usize,TID,TPART> ICSMex<S,TID,TPART> where  
+TID: Integer,
+TPART: Copy+  Integer + FromPrimitive + core::ops::Mul<usize, Output = usize> ,
+{
     pub fn check_error(&self, err_index: Option<usize>) -> bool{
         match err_index{
             None => {
@@ -39,7 +46,7 @@ impl<const S:usize> ICSMex<S> {
         }
     }
 
-    pub const fn same_id(&self,id:usize) -> bool {
+    pub fn same_id(&self,id:TID) -> bool {
         self.id == id
     }
 
@@ -66,15 +73,19 @@ impl<const S:usize> ICSMex<S> {
 
 #[allow(unused)]
 #[derive(Debug)]
-pub struct ICSMexFull<const S: usize>
+pub struct ICSMexFull<const S: usize,TID,TPART> where 
+TID: Integer,
+TPART: Copy+  Integer + FromPrimitive + core::ops::Mul<usize, Output = usize> ,
 {
-    parts: Vec<ICSMex<S>>,
+    parts: Vec<ICSMex<S,TID,TPART>>,
 }
 
 #[allow(unused)]
-impl<const S:usize> ICSMexFull<S>
+impl<const S:usize,TID,TPART> ICSMexFull<S,TID,TPART>where 
+TID: Copy + Integer,
+TPART: Copy+  Integer + FromPrimitive + core::ops::Mul<usize, Output = usize> + From<usize>,
 {
-    pub fn new(id: usize,err_num: usize) -> Self {
+    pub fn new(id: TID,err_num: usize) -> Self {
         let err_in_one_packet = S*8;
         let integer_part = err_num/err_in_one_packet;
         let aux_part = {
@@ -92,18 +103,18 @@ impl<const S:usize> ICSMexFull<S>
         let parts = {
             let mut res = Vec::with_capacity(num_packets);
             for i in 0..num_packets{
-                res.push(ICSMex{id, part: i,err_vec: [0;S]});
+                res.push(ICSMex{id, part: TPART::from(i),err_vec: [0;S]});
             }
             res
         };
         Self{parts}
     }
 
-    pub fn iter(&self) -> core::slice::Iter<ICSMex<S>>{
+    pub fn iter(&self) -> core::slice::Iter<ICSMex<S,TID,TPART>>{
         self.parts.iter()
     }
 
-    pub fn get_part(&mut self, part: usize) -> Result<&mut ICSMex<S>,(usize,&str)>{
+    pub fn get_part(&mut self, part: usize) -> Result<&mut ICSMex<S,TID,TPART>,(usize,&str)>{
         if part < self.parts.len(){
             return Ok(&mut self.parts[part])
         }
@@ -111,14 +122,22 @@ impl<const S:usize> ICSMexFull<S>
     }
 
     pub fn set_err(&mut self, err_idx: usize) -> Result<(),(&str,usize)>{
-        fn up_f<const S: usize>(se: &mut ICSMex<S>,reg_idx: usize,bit_index: u8){
+        fn up_f<const S: usize,TID,TPART>(se: &mut ICSMex<S,TID,TPART>,reg_idx: usize,bit_index: u8)
+        where
+            TID: Integer,
+            TPART: Copy+  Integer + FromPrimitive + core::ops::Mul<usize, Output = usize>,
+        {
             se.set_err(reg_idx, bit_index);
         }
         self.err_prop_set(err_idx, up_f)
     }
 
     pub fn clear_err(&mut self, err_idx:usize) -> Result<(),(&str,usize)> {
-        fn up_f<const S: usize>(se: &mut ICSMex<S>,reg_idx: usize,bit_index: u8){
+        fn up_f<const S: usize,TID,TPART>(se: &mut ICSMex<S,TID,TPART>,reg_idx: usize,bit_index: u8)
+        where
+            TID: Integer,
+            TPART: Copy+  Integer + FromPrimitive + core::ops::Mul<usize, Output = usize>,
+        {
             se.clear_err(reg_idx, bit_index);
         }
         self.err_prop_set(err_idx, up_f)
@@ -126,7 +145,7 @@ impl<const S:usize> ICSMexFull<S>
 
     //private
     fn err_prop_set<F>(&mut self,err_idx: usize,update_f : F) -> Result<(), (&str, usize)> 
-        where F: Fn(&mut ICSMex<S>,usize,u8) -> (),{
+        where F: Fn(&mut ICSMex<S,TID,TPART>,usize,u8) -> (),{
         let err_in_one_packet = S*8;
         let num_parts = self.parts.len();
         if  err_idx >= err_in_one_packet * num_parts {
@@ -143,11 +162,13 @@ impl<const S:usize> ICSMexFull<S>
 
 #[cfg(test)]
 mod test{
+    use core::usize;
+
     use super::ICSMexFull;
 
     #[test]
     fn test_set_bit() {
-        let mut err : ICSMexFull<13> = ICSMexFull::new(12, 1);
+        let mut err : ICSMexFull<13,usize,usize> = ICSMexFull::new(12, 1);
         err.set_err(0).ok();
         let p = err.get_part(0).ok().unwrap();
         assert_eq!(p.check_error(Some(0)),true);
@@ -155,7 +176,7 @@ mod test{
 
     #[test]
     fn check_err_index() {
-        let mut err : ICSMexFull<2> = ICSMexFull::new(12, 1);
+        let mut err : ICSMexFull<2,usize,usize> = ICSMexFull::new(12, 1);
         err.set_err(0).ok();
         let p = err.get_part(0).ok().unwrap();
         assert_eq!(p.check_error(Some(0)),true);
@@ -163,7 +184,7 @@ mod test{
 
     #[test]
     fn check_err_all() {
-        let mut err : ICSMexFull<13> = ICSMexFull::new(12, 1);
+        let mut err : ICSMexFull<13,usize,usize> = ICSMexFull::new(12, 1);
         err.set_err(0).ok();
         err.set_err(1).ok();
         let p = err.get_part(0).ok().unwrap();
@@ -172,7 +193,7 @@ mod test{
 
     #[test]
     fn check_err_all_no_one() {
-        let mut err : ICSMexFull<13> = ICSMexFull::new(12, 1);
+        let mut err : ICSMexFull<13,usize,usize> = ICSMexFull::new(12, 1);
         err.set_err(0).ok();
         let p = err.get_part(0).ok().unwrap();
         assert_eq!(p.check_error(None),true);
@@ -180,7 +201,7 @@ mod test{
 
     #[test]
     fn check_err_all_no_index() {
-        let mut err : ICSMexFull<13> = ICSMexFull::new(12, 1);
+        let mut err : ICSMexFull<13,usize,usize> = ICSMexFull::new(12, 1);
         err.set_err(5).ok();
         let p = err.get_part(0).ok().unwrap();
         assert_eq!(p.check_error(Some(0)),false);
@@ -188,7 +209,7 @@ mod test{
 
     #[test]
     fn check_new_multiple_parts(){
-        let t : ICSMexFull<2> = ICSMexFull::new(12, 33);
+        let t : ICSMexFull<2,usize,usize> = ICSMexFull::new(12, 33);
         let mut i = 0;
         for p in t.parts.iter(){
             i+=1;
@@ -199,7 +220,7 @@ mod test{
 
     #[test]
     fn check_new_one_part(){
-        let t : ICSMexFull<1> = ICSMexFull::new(12,0);
+        let t : ICSMexFull<1,usize,usize> = ICSMexFull::new(12,0);
         let mut i = 0;
         for p in t.parts.iter(){
             i+=1;

@@ -8,6 +8,7 @@ use super::ics_trait::ics_mex::ICSMex;
 
 use alloc::vec::Vec;
 use core::result;
+use num::{Integer,FromPrimitive};
 
 #[derive(Debug,Clone)]
 pub enum ErrorType {
@@ -23,18 +24,24 @@ pub struct ICSError<'a>{
 }
 
 #[allow(unused)]
-pub struct ICS<'a,M,const S:usize> where 
-M : ErrMap{
+pub struct ICS<'a,M,const S:usize,TID> 
+where 
+    M : ErrMap,
+    TID: Integer + Copy,
+{
     int_vec: Vec<(usize,InternalCheck<'a>)>,
-    ext_vec: Vec<(usize,ICSDep<'a,S>)>,
+    ext_vec: Vec<(usize,ICSDep<'a,S,TID>)>,
     err_map: M,
-    id: usize,
+    id: TID,
 }
 
 #[allow(unused)]
-impl<'a,M,const S: usize> ICS<'a,M,S> where 
-M : ErrMap{
-    pub fn new(id:usize) -> Result<Self,&'a str> {
+impl<'a,M,const S: usize,TID> ICS<'a,M,S,TID> 
+where 
+    M : ErrMap,
+    TID: Integer + Copy,
+{
+    pub fn new(id:TID) -> Result<Self,&'a str> {
         Ok(Self {
             int_vec: Vec::new(),
             ext_vec: Vec::new(),
@@ -47,14 +54,14 @@ M : ErrMap{
         int_err_cap: usize, 
         ext_err_cap: usize, 
         error_cap: usize, 
-        id:usize) -> Self {
+        id:TID) -> Self {
         let ie = Vec::with_capacity(int_err_cap);
         let ee = Vec::with_capacity(ext_err_cap);
         Self {int_vec: ie,ext_vec: ee, err_map: M::new(),id}
     }
 
-    pub fn full_spec(id:usize, int_vec: Vec<(usize,InternalCheck<'a>)>, 
-        ext_vec: Vec<(usize,ICSDep<'a,S>)>) -> Self{
+    pub fn full_spec(id:TID, int_vec: Vec<(usize,InternalCheck<'a>)>, 
+        ext_vec: Vec<(usize,ICSDep<'a,S,TID>)>) -> Self{
         Self{
             id, int_vec,ext_vec,err_map: M::new(),
         }
@@ -70,7 +77,7 @@ M : ErrMap{
         }
     }
 
-    pub fn add_external_check(&mut self, check: ICSDep<'a,S>, err_index: usize) -> Result<(),(usize,&'a str)>{
+    pub fn add_external_check(&mut self, check: ICSDep<'a,S,TID>, err_index: usize) -> Result<(),(usize,&'a str)>{
         match self.err_map.insert_err(err_index){
             Ok(_) => {
                 self.ext_vec.push((err_index,check));
@@ -86,14 +93,20 @@ M : ErrMap{
         }
     }
 
-    pub fn check_general_mex(&mut self, mex: &ICSMex<S>){
+    pub fn check_general_mex<TPART>(&mut self, mex: &ICSMex<S,TID,TPART>)
+    where 
+        TPART: Copy+  Integer + FromPrimitive + core::ops::Mul<usize, Output = usize> ,
+    {
         for (_,cond) in self.ext_vec.iter_mut() {
             cond.check_mex(mex);
         };
     }
 
 
-    pub fn check_specific_mex(&mut self,mex: &ICSMex<S>, ext_err_index: usize) -> result::Result<(),&str>{
+    pub fn check_specific_mex<TPART>(&mut self,mex: &ICSMex<S,TID,TPART>, ext_err_index: usize) -> result::Result<(),&str>
+    where 
+        TPART: Copy+  Integer + FromPrimitive + core::ops::Mul<usize, Output = usize> ,
+    {
         if ext_err_index >= self.ext_vec.len() {
             return Err("invalid index range fir ext_vec")
         }
@@ -118,9 +131,12 @@ M : ErrMap{
         }
     }
 
-    pub fn create_ics_messages(&mut self) -> ICSMexFull<S>{
+    pub fn create_ics_messages<TPART>(&mut self) -> ICSMexFull<S,TID,TPART>
+    where 
+        TPART: Copy+  Integer + FromPrimitive + core::ops::Mul<usize, Output = usize> + From<usize>,
+    {
         let err_num = self.int_vec.len() + self.ext_vec.len();
-        let mut r = ICSMexFull::new(self.id, err_num);
+        let mut r : ICSMexFull<S, TID, TPART> = ICSMexFull::new(self.id, err_num);
         for (err_index,int_err) in self.int_vec.iter_mut(){
             if int_err.run_check() == ErrStatus::ERR{
                 r.set_err(*err_index);
@@ -158,9 +174,9 @@ mod test{
 
     #[test]
     fn create_ics() {
-        let mut ics : ICS<Bst,MEXSIZE>= ICS::new(1).unwrap();
+        let mut ics : ICS<Bst,MEXSIZE,usize>= ICS::new(1).unwrap();
         ics.internal_check();
-        let res = ics.create_ics_messages();
+        let res : ics_mex::ICSMexFull<8, usize, usize> = ics.create_ics_messages();
 
         assert_eq!(ics.id,1);
         for m in res.iter(){
@@ -170,7 +186,7 @@ mod test{
 
     #[test]
     fn locate_internal_fail() {
-        let mut ics : ICS<Bst, MEXSIZE> = ICS::new(12).unwrap();
+        let mut ics : ICS<Bst, MEXSIZE,usize> = ICS::new(12).unwrap();
 
         let at_u8 = AtomicU8::new(12);
         let mut che_u8 :CheckU8<0, 15, 99, 0> = CheckU8::new(&at_u8);
@@ -179,7 +195,7 @@ mod test{
         ics.add_internal_check(it_ch, 1);
         at_u8.store(101, Ordering::Relaxed);
         ics.internal_check();
-        let mex = ics.create_ics_messages();
+        let mex : ics_mex::ICSMexFull<8, usize, usize> = ics.create_ics_messages();
         let mut i = 0;
         for m in mex.iter(){
             i+=1;
@@ -190,7 +206,7 @@ mod test{
 
     #[test]
     fn locate_external_fail_spec_mex() {
-        let mut ics : ICS<Bst, MEXSIZE> = ICS::new(12).unwrap();
+        let mut ics : ICS<Bst, MEXSIZE,usize> = ICS::new(12).unwrap();
 
         let at_u8 = AtomicU8::new(12);
         let mut che_u8 :CheckU8<0, 15, 99, 0> = CheckU8::new(&at_u8);
@@ -199,7 +215,7 @@ mod test{
         ics.add_internal_check(it_ch, 1);
         at_u8.store(101, Ordering::Relaxed);
         ics.internal_check();
-        let mex = ics.create_ics_messages();
+        let mex : ics_mex::ICSMexFull<8, usize, usize> = ics.create_ics_messages();
         let mut i = 0;
         for m in mex.iter(){
             i+=1;
@@ -210,7 +226,7 @@ mod test{
 
     #[test]
     fn locate_external_fail_general_mex() {
-        let mut ics : ICS<Bst, MEXSIZE> = ICS::new(12).unwrap();
+        let mut ics : ICS<Bst, MEXSIZE,usize> = ICS::new(12).unwrap();
 
         let at_u8 = AtomicU8::new(12);
         let mut che_u8 :CheckU8<0, 15, 99, 0> = CheckU8::new(&at_u8);
@@ -219,7 +235,7 @@ mod test{
         ics.add_internal_check(it_ch, 1);
         at_u8.store(101, Ordering::Relaxed);
         ics.internal_check();
-        let mex = ics.create_ics_messages();
+        let mex : ics_mex::ICSMexFull<8, usize, usize> = ics.create_ics_messages();
         let mut i = 0;
         for m in mex.iter(){
             i+=1;
