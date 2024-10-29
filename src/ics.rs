@@ -144,7 +144,7 @@ where
     where 
         TPART: Copy + Unsigned +  Into<usize> + TryFrom<usize>
     {
-        let err_num = self.int_vec.len() + self.ext_vec.len();
+        let err_num = self.err_map.max();
         let mut r : ICSMexFull<S, TID, TPART> = ICSMexFull::new(self.id, err_num);
         for (err_index,int_err) in self.int_vec.iter_mut(){
             if int_err.run_check() == ErrStatus::ERR{

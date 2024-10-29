@@ -73,6 +73,16 @@ impl ErrMap for Bst{
     {
         Self{key: None,max_child: None,min_child: None}
     }
+
+    fn max(&self) -> usize {
+        match (self.key,&self.max_child){
+            (None,_) => 0,
+            (Some(i),None) => i,
+            (_,Some(n)) => {
+                n.max()
+            },
+        }
+    }
 }
 
 #[cfg(test)]
