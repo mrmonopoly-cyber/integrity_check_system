@@ -18,13 +18,15 @@ type IcsPartType = u8;
 pub type SendCanFun = fn(&Frame) -> Result<(),()>;
 
 #[derive(Debug)]
-pub struct ICSCan<'a,M:ErrMap> {
+pub struct ICSCanBase<'a,M> 
+where M: ErrMap
+{
     ics: ICS<'a,M,ICS_PAYLOAD_SIZE,u8>,
     can_id: identifier::Id,
     send_f: SendCanFun,
 }
 
-impl<'a,M: ErrMap> ICSCan<'a,M>
+impl<'a,M: ErrMap> ICSCanBase<'a,M>
 {
     pub fn new(ics_can_id: u16, ics_internal_id: u8, send_f: SendCanFun) -> Self
     {
@@ -114,14 +116,14 @@ impl<'a,M: ErrMap> ICSCan<'a,M>
 #[cfg(test)]
 mod test{
     use crate::err_map::bst::Bst;
-    use super::ICSCan;
+    use super::ICSCanBase;
     use can::frame::Frame;
     use can::identifier::{Id,StandardId};
 
     #[test]
     fn create_test() {
         let send_f = |_mex: &Frame| -> Result<(),()> {Ok(())};
-        let ics_can : ICSCan<Bst> = ICSCan::new(2, 1, send_f);
+        let ics_can : ICSCanBase<Bst> = ICSCanBase::new(2, 1, send_f);
 
         assert_eq!(ics_can.can_id,Id::Standard(StandardId::new(2).unwrap()));
     }
