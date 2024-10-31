@@ -1,4 +1,4 @@
-use crate::err_map::ErrMap;
+use crate::{err_map::ErrMap, ics_trait::freq_check::freq_map::FreqTree};
 use crate::ics_trait::generic_check::ErrStatus;
 use crate::ics_trait::ics_mex::ICSMexFull;
 use super::ics_trait::internal::*;
@@ -33,6 +33,7 @@ where
     int_vec: Vec<(usize,InternalCheck<'a>)>,
     ext_vec: Vec<(usize,ICSDep<'a,S,TID>)>,
     err_map: M,
+    freq_map: FreqTree,
     id: TID,
 }
 
@@ -48,6 +49,7 @@ where
             ext_vec: Vec::new(),
             err_map: M::new(),
             id,
+            freq_map: FreqTree::new(),
         })
     }
 
@@ -59,14 +61,14 @@ where
     {
         let ie = Vec::with_capacity(int_err_cap);
         let ee = Vec::with_capacity(ext_err_cap);
-        Self {int_vec: ie,ext_vec: ee, err_map: M::new(),id}
+        Self {int_vec: ie,ext_vec: ee, err_map: M::new(),freq_map:FreqTree::new(), id}
     }
 
     pub fn full_spec(id:TID, int_vec: Vec<(usize,InternalCheck<'a>)>, 
         ext_vec: Vec<(usize,ICSDep<'a,S,TID>)>) -> Self
     {
         Self{
-            id, int_vec,ext_vec,err_map: M::new(),
+            id, int_vec,ext_vec,err_map: M::new(),freq_map:FreqTree::new(),
         }
     }
 

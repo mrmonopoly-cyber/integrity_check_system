@@ -14,6 +14,7 @@ TID: Integer + Copy,
     id: TID,
     error_idx: Option<usize>,
     fail_par: &'a mut dyn MexConseguence,
+    mex_freq: usize,
     status: ErrStatus,
 }
 
@@ -39,6 +40,7 @@ TID: Integer +  Copy,
         description: &'a str,
         id: TID,
         error_idx: Option<usize>,
+        mex_freq: usize,
         fail_par: &'a mut dyn MexConseguence,
         ) -> Self
     {
@@ -47,6 +49,7 @@ TID: Integer +  Copy,
             id, 
             error_idx, 
             fail_par,
+            mex_freq,
             status: ErrStatus::OK 
         }
     }
@@ -91,7 +94,7 @@ mod test{
     fn create_dep() {
         let var = AtomicU8::new(6);
         let mut fail_par : CheckU8<0, 10, 99, 0> = CheckU8::new(&var);
-        let dep : ICSDep<2,usize> = ICSDep::new(STR, ID, Some(0), &mut fail_par);
+        let dep : ICSDep<2,usize> = ICSDep::new(STR, ID, Some(0),100, &mut fail_par);
         assert_eq!(dep.get_description(),STR);
         assert_eq!(dep.get_status(),ErrStatus::OK);
     }
@@ -100,7 +103,7 @@ mod test{
     fn discard_wrong_mex_wrong_id() {
         let var = AtomicU8::new(6);
         let mut fail_par : CheckU8<0, 10, 99, 0> = CheckU8::new(&var);
-        let mut dep : ICSDep<2,usize> = ICSDep::new(STR, ID, Some(0), &mut fail_par);
+        let mut dep : ICSDep<2,usize> = ICSDep::new(STR, ID, Some(0),100, &mut fail_par);
         let mut m : ICSMexFull<2, usize, usize> = ICSMexFull::new(ID+1, 2);
         let wrong_id = m.get_part(0).ok().unwrap();
         let r = dep.check_mex(wrong_id);
@@ -111,7 +114,7 @@ mod test{
     fn recognize_err_in_mex() {
         let var = AtomicU8::new(6);
         let mut fail_par : CheckU8<0, 10, 99, 0> = CheckU8::new(&var);
-        let mut dep : ICSDep<2,usize> = ICSDep::new(STR, ID, Some(5), &mut fail_par);
+        let mut dep : ICSDep<2,usize> = ICSDep::new(STR, ID, Some(5),100, &mut fail_par);
         let mut m : ICSMexFull<2, usize, usize>= ICSMexFull::new(ID, 2);
         let err_mex = m.get_part(0).ok().unwrap();
         err_mex.set_err(0, 5);
@@ -123,7 +126,7 @@ mod test{
     fn recognize_err_in_any_pos() {
         let var = AtomicU8::new(6);
         let mut fail_par : CheckU8<0, 10, 99, 0> = CheckU8::new(&var);
-        let mut dep : ICSDep<2,usize> = ICSDep::new(STR, ID, None, &mut fail_par);
+        let mut dep : ICSDep<2,usize> = ICSDep::new(STR, ID, None,100, &mut fail_par);
         let mut m : ICSMexFull<2, usize, usize> = ICSMexFull::new(ID, 10);
         let err_mex = m.get_part(0).ok().unwrap();
         err_mex.set_err(0, 5);
@@ -135,7 +138,7 @@ mod test{
     fn recognize_ok_mex() {
         let var = AtomicU8::new(6);
         let mut fail_par : CheckU8<0, 10, 99, 0> = CheckU8::new(&var);
-        let mut dep : ICSDep<2,usize> = ICSDep::new(STR, ID, Some(1), &mut fail_par);
+        let mut dep : ICSDep<2,usize> = ICSDep::new(STR, ID, Some(1),100, &mut fail_par);
         let mut m : ICSMexFull<2, usize, usize> = ICSMexFull::new(ID, 10);
         let err_mex = m.get_part(0).ok().unwrap();
         err_mex.set_err(0, 5);

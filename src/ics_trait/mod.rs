@@ -1,3 +1,5 @@
+pub mod freq_check;
+
 pub mod internal;
 pub mod external;
 pub mod generic_check;
