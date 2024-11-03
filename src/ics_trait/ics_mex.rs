@@ -1,5 +1,5 @@
-use alloc::vec::Vec;
 use bit_ops::BitOps;
+use alloc::vec::Vec;
 use core::result::Result;
 use core::slice::Iter;
 use num::{integer::Integer, Unsigned};

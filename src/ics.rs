@@ -1,3 +1,4 @@
+use alloc::vec::Vec;
 use crate::err_map::ErrMap;
 use crate::ics_trait::generic_check::ErrStatus;
 use crate::ics_trait::ics_mex::ICSMexFull;
@@ -6,7 +7,6 @@ use super::ics_trait::generic_check::GenericCheck;
 use super::ics_trait::external::ICSDep;
 use super::ics_trait::ics_mex::ICSMex;
 
-use alloc::vec::Vec;
 use core::result;
 use num::{Integer,Unsigned};
 
