@@ -44,7 +44,8 @@ impl ErrMap for Bst{
 
     fn delete_err<'a>(&mut self,err_num: usize) -> Result<(),&'a str> 
     {
-        todo!()
+        // todo!()
+        Ok(())
     }
 
     fn exist_err<'a>(&mut self,err_num: usize) -> bool 

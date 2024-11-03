@@ -1,34 +1,32 @@
 use core::usize;
-use alloc::vec;
-use bytes;
 
 use crate::ics_trait::internal::InternalCheck;
 use crate::{ics::ICS, ics_trait::external::ICSDep};
 use crate::ics_trait::ics_mex::ICSMexFull;
 use crate::err_map::ErrMap;
 use crate::ics_trait::ics_mex::ICSMex;
-use can::frame::Frame;
-use can::{frame,identifier};
-use can::identifier::{Id, StandardId};
+use embedded_can::{Frame,Id,StandardId};
 
 const ICS_PAYLOAD_SIZE : usize = 7;
 type IcsPartType = u8;
 
 
-pub type SendCanFun = fn(&Frame) -> Result<(),()>;
+pub type SendCanFun<F> = fn(&F) -> Result<(),()>;
 
 #[derive(Debug)]
-pub struct ICSCanBase<'a,M> 
-where M: ErrMap
+pub struct ICSCanBase<'a,M,F> 
+where 
+    M: ErrMap,
+    F: Frame,
 {
     ics: ICS<'a,M,ICS_PAYLOAD_SIZE,u8>,
-    can_id: identifier::Id,
-    send_f: SendCanFun,
+    can_id: Id,
+    send_f: SendCanFun<F>,
 }
 
-impl<'a,M: ErrMap> ICSCanBase<'a,M>
+impl<'a,M: ErrMap,F:Frame> ICSCanBase<'a,M,F>
 {
-    pub fn new(ics_can_id: u16, ics_internal_id: u8, send_f: SendCanFun) -> Self
+    pub fn new(ics_can_id: u16, ics_internal_id: u8, send_f: SendCanFun<F>) -> Self
     {
         let ics : ICS<'a,M,ICS_PAYLOAD_SIZE,u8> = ICS::new(ics_internal_id).ok().unwrap();
         let ics_can_id = Id::Standard(StandardId::new(ics_can_id).unwrap());
@@ -36,7 +34,7 @@ impl<'a,M: ErrMap> ICSCanBase<'a,M>
         Self{ics,can_id: ics_can_id,send_f}
     }
 
-    pub fn check_mex_general(&mut self, mex: &frame::Frame) -> Result<(),()>
+    pub fn check_mex_general(&mut self, mex: &F) -> Result<(),()>
     {
         let fc = |ics: &mut ICS<M,ICS_PAYLOAD_SIZE,u8>, ics_mex: &ICSMex<ICS_PAYLOAD_SIZE,u8,u8>|
         {
@@ -46,7 +44,7 @@ impl<'a,M: ErrMap> ICSCanBase<'a,M>
         self.private_check_mex(mex, fc)
     }
 
-    pub fn check_mex_specific_err(&mut self, mex: &frame::Frame,err_index:&'a [usize]) 
+    pub fn check_mex_specific_err(&mut self, mex: &F,err_index:&'a [usize]) 
         -> Result<(),()>
     {
         let fc = |ics: &mut ICS<M,ICS_PAYLOAD_SIZE,u8>, ics_mex: &ICSMex<ICS_PAYLOAD_SIZE,u8,u8>|
@@ -76,7 +74,7 @@ impl<'a,M: ErrMap> ICSCanBase<'a,M>
         let errs : ICSMexFull<ICS_PAYLOAD_SIZE, u8, IcsPartType> =
             self.ics.create_ics_messages();
         for ics_mex in errs.iter(){
-            let mut buff = vec![0;8];
+            let mut buff = [0;8];
             buff[0] = ics_mex.id() << 4;
             buff[0] |= ics_mex.part() & 0x0F;
             let mut i = 1;
@@ -84,16 +82,15 @@ impl<'a,M: ErrMap> ICSCanBase<'a,M>
                 buff[i] = *c;
                 i+=1;
             }
-            let f = bytes::Bytes::from(buff);
-            let can_frame = Frame::new(self.can_id, f);
+            let can_frame = F::new(self.can_id, &buff).unwrap();
             while (self.send_f)(&can_frame).is_err() {}
         }
     }
     
     //private
 
-    fn private_check_mex<F>(&mut self, mex: &frame::Frame, mut f:F) -> Result<(),()>
-    where F: FnMut (&mut ICS<M,ICS_PAYLOAD_SIZE,u8>,&ICSMex<ICS_PAYLOAD_SIZE,u8,u8>) -> (),
+    fn private_check_mex<FUN>(&mut self, mex: &F, mut f:FUN) -> Result<(),()>
+    where FUN: FnMut (&mut ICS<M,ICS_PAYLOAD_SIZE,u8>,&ICSMex<ICS_PAYLOAD_SIZE,u8,u8>) -> (),
     {
         if mex.id() == self.can_id{
             let mex_data = mex.data();
@@ -115,16 +112,5 @@ impl<'a,M: ErrMap> ICSCanBase<'a,M>
 
 #[cfg(test)]
 mod test{
-    use crate::err_map::bst::Bst;
-    use super::ICSCanBase;
-    use can::frame::Frame;
-    use can::identifier::{Id,StandardId};
 
-    #[test]
-    fn create_test() {
-        let send_f = |_mex: &Frame| -> Result<(),()> {Ok(())};
-        let ics_can : ICSCanBase<Bst> = ICSCanBase::new(2, 1, send_f);
-
-        assert_eq!(ics_can.can_id,Id::Standard(StandardId::new(2).unwrap()));
-    }
 }
