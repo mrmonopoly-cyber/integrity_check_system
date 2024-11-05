@@ -3,7 +3,10 @@ use embedded_timers::{clock::Clock, instant::Instant};
 
 #[allow(unused)]
 #[derive(Debug)]
-struct FreqNode<I: Instant> {
+struct FreqNode<I> 
+where 
+    I: Instant,
+{
     timeline: I,
     node_id: usize,
     min_child: Option<Box<FreqNode<I>>>,
@@ -11,14 +14,22 @@ struct FreqNode<I: Instant> {
 }
 
 #[allow(unused)]
-impl<I:Instant> FreqNode<I> {
+impl<I> FreqNode<I>
+where 
+    I: Instant,
+{
     fn new(timeline: I,node_id:usize) -> Self{
-        Self{ timeline, node_id, min_child: None, max_child: None }
+        Self{ timeline, node_id, min_child: None, max_child: None}
     }
 
-    fn insert(&mut self,(timeline,node_id):(I,usize)) -> Result<(),()>{
-        fn check_child<I:Instant>(se: &mut Option<Box<FreqNode<I>>>,node_id:usize, timeline: I,)
-            -> Result<(), ()>{
+    fn insert(& mut self,(timeline,node_id):(I,usize)) -> Result<(),()>{
+        fn check_child<I>(
+            se: &mut Option<Box<FreqNode<I>>>,
+            node_id:usize, 
+            timeline: I,)-> Result<(), ()>
+        where
+            I: Instant,
+        {
             match se{
                 None => {
                     *se = Some(Box::new(FreqNode::new(timeline, node_id)));
@@ -39,7 +50,10 @@ impl<I:Instant> FreqNode<I> {
     }
 
     fn delete(&mut self,timeline:I){
-        fn check_child<I:Instant>(se: &mut Option<Box<FreqNode<I>>>, timeline: I,){
+        fn check_child<I>(se: &mut Option<Box<FreqNode<I>>>, timeline: I,)
+        where
+            I: Instant,
+        {
             match se{
                 None => (),
                 Some(n) =>{
