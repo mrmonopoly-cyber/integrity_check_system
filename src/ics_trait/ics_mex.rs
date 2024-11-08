@@ -1,13 +1,12 @@
-use alloc::vec::Vec;
 use bit_ops::BitOps;
+use alloc::vec::Vec;
 use core::result::Result;
 use core::slice::Iter;
-use num::{integer::Integer, Unsigned};
 
 #[derive(Debug)]
 pub struct ICSMex<const S: usize,TID,TPART>where 
-TID: Integer,
-TPART: Copy + Unsigned +  Into<usize> + TryFrom<usize>
+TID: ,
+TPART: Copy +  Into<usize> + TryFrom<usize>
 {
     id: TID,
     part: TPART,
@@ -15,8 +14,8 @@ TPART: Copy + Unsigned +  Into<usize> + TryFrom<usize>
 }
 
 impl<const S:usize,TID,TPART> ICSMex<S,TID,TPART> where  
-TID: Integer + Copy,
-TPART: Copy + Unsigned +  Into<usize> + TryFrom<usize>
+TID: Copy + core::cmp::PartialEq,
+TPART: Copy +  Into<usize> + TryFrom<usize>
 {
     pub fn new(id:TID,part:TPART, err_vec: [u8;S]) -> Self
     {
@@ -97,18 +96,18 @@ TPART: Copy + Unsigned +  Into<usize> + TryFrom<usize>
 
 
 #[allow(unused)]
-#[derive(Debug)]
+#[derive(Debug,)]
 pub struct ICSMexFull<const S: usize,TID,TPART> where 
-TID: Integer,
-TPART: Copy + Unsigned +  Into<usize> + TryFrom<usize>
+TID: core::cmp::PartialEq,
+TPART: Copy +  Into<usize> + TryFrom<usize>
 {
     parts: Vec<ICSMex<S,TID,TPART>>,
 }
 
 #[allow(unused)]
 impl<const S:usize,TID,TPART> ICSMexFull<S,TID,TPART>where 
-TID: Integer + Copy,
-TPART: Copy + Unsigned +  Into<usize> + TryFrom<usize>
+TID:  Copy + core::cmp::PartialEq,
+TPART: Copy +   Into<usize> + TryFrom<usize>
 {
     pub fn new(id: TID,err_num: usize) -> Self {
         let err_in_one_packet = S*8;
@@ -149,8 +148,8 @@ TPART: Copy + Unsigned +  Into<usize> + TryFrom<usize>
     pub fn set_err(&mut self, err_idx: usize) -> Result<(),(&str,usize)>{
         fn up_f<const S: usize,TID,TPART>(se: &mut ICSMex<S,TID,TPART>,reg_idx: usize,bit_index: u8)
         where
-            TID: Integer + Copy,
-            TPART: Copy + Unsigned +  Into<usize> + TryFrom<usize>,
+            TID: Copy + core::cmp::PartialEq ,
+            TPART: Copy +   Into<usize> + TryFrom<usize>,
         {
             se.set_err(reg_idx, bit_index);
         }
@@ -160,8 +159,8 @@ TPART: Copy + Unsigned +  Into<usize> + TryFrom<usize>
     pub fn clear_err(&mut self, err_idx:usize) -> Result<(),(&str,usize)> {
         fn up_f<const S: usize,TID,TPART>(se: &mut ICSMex<S,TID,TPART>,reg_idx: usize,bit_index: u8)
         where
-            TID: Integer + Copy,
-            TPART: Copy + Unsigned +  Into<usize> + TryFrom<usize>,
+            TID:  Copy + core::cmp::PartialEq,
+            TPART: Copy +   Into<usize> + TryFrom<usize>,
         {
             se.clear_err(reg_idx, bit_index);
         }

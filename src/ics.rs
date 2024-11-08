@@ -1,4 +1,6 @@
-use crate::{err_map::ErrMap, ics_trait::freq_check::freq_map::FreqTree};
+use crate::ics_trait::freq_check::freq_map::FreqTree;
+use alloc::vec::Vec;
+use crate::err_map::ErrMap;
 use crate::ics_trait::generic_check::ErrStatus;
 use crate::ics_trait::ics_mex::ICSMexFull;
 use super::ics_trait::internal::*;
@@ -6,9 +8,7 @@ use super::ics_trait::generic_check::GenericCheck;
 use super::ics_trait::external::ICSDep;
 use super::ics_trait::ics_mex::ICSMex;
 
-use alloc::vec::Vec;
 use core::result;
-use num::{Integer,Unsigned};
 
 #[derive(Debug,Clone)]
 pub enum ErrorType {
@@ -25,31 +25,35 @@ pub struct ICSError<'a>{
 
 #[allow(unused)]
 #[derive(Debug)]
-pub struct ICS<'a,M,const S:usize,TID> 
+pub struct ICS<'a,M,const S:usize,TID,I,CLK> 
 where 
     M : ErrMap,
-    TID: Integer + Copy,
+    TID: Copy + core::cmp::PartialEq,
+    I: embedded_timers::instant::Instant,
+    CLK: embedded_timers::clock::Clock<Instant = I>,
 {
     int_vec: Vec<(usize,InternalCheck<'a>)>,
     ext_vec: Vec<(usize,ICSDep<'a,S,TID>)>,
     err_map: M,
-    freq_map: FreqTree,
+    freq_map: FreqTree<I,CLK>,
     id: TID,
 }
 
 #[allow(unused)]
-impl<'a,M,const S: usize,TID> ICS<'a,M,S,TID> 
+impl<'a,M,const S: usize,TID,I,CLK> ICS<'a,M,S,TID,I,CLK> 
 where 
     M : ErrMap,
-    TID: Integer + Copy,
+    TID: Copy + core::cmp::PartialEq,
+    I: embedded_timers::instant::Instant,
+    CLK: embedded_timers::clock::Clock<Instant = I>,
 {
-    pub fn new(id:TID) -> Result<Self,&'a str> {
+    pub fn new(id:TID,clock: CLK) -> Result<Self,&'a str> {
         Ok(Self {
             int_vec: Vec::new(),
             ext_vec: Vec::new(),
             err_map: M::new(),
             id,
-            freq_map: FreqTree::new(),
+            freq_map: FreqTree::new(clock),
         })
     }
 
@@ -57,18 +61,19 @@ where
         int_err_cap: usize, 
         ext_err_cap: usize, 
         error_cap: usize, 
-        id:TID) -> Self 
+        id:TID,
+        clock: CLK) -> Self 
     {
         let ie = Vec::with_capacity(int_err_cap);
         let ee = Vec::with_capacity(ext_err_cap);
-        Self {int_vec: ie,ext_vec: ee, err_map: M::new(),freq_map:FreqTree::new(), id}
+        Self {int_vec: ie,ext_vec: ee, err_map: M::new(),freq_map:FreqTree::new(clock), id}
     }
 
     pub fn full_spec(id:TID, int_vec: Vec<(usize,InternalCheck<'a>)>, 
-        ext_vec: Vec<(usize,ICSDep<'a,S,TID>)>) -> Self
+        ext_vec: Vec<(usize,ICSDep<'a,S,TID>)>, clock: CLK ) -> Self
     {
         Self{
-            id, int_vec,ext_vec,err_map: M::new(),freq_map:FreqTree::new(),
+            id, int_vec,ext_vec,err_map: M::new(),freq_map:FreqTree::new(clock),
         }
     }
 
@@ -105,7 +110,7 @@ where
 
     pub fn check_general_mex<TPART>(&mut self, mex: &ICSMex<S,TID,TPART>)
     where 
-        TPART: Copy + Unsigned +  Into<usize> + TryFrom<usize>
+        TPART: Copy +  Into<usize> + TryFrom<usize>
     {
         for (_,cond) in self.ext_vec.iter_mut() {
             cond.check_mex(mex);
@@ -115,7 +120,7 @@ where
 
     pub fn check_specific_mex<TPART>(&mut self,mex: &ICSMex<S,TID,TPART>, ext_err_index: usize) -> result::Result<(),&str>
     where 
-        TPART: Copy + Unsigned +  Into<usize> + TryFrom<usize>
+        TPART: Copy +  Into<usize> + TryFrom<usize>
     {
         if ext_err_index >= self.ext_vec.len() {
             return Err("invalid index range fir ext_vec")
@@ -144,7 +149,7 @@ where
 
     pub fn create_ics_messages<TPART>(&mut self) -> ICSMexFull<S,TID,TPART>
     where 
-        TPART: Copy + Unsigned +  Into<usize> + TryFrom<usize>
+        TPART: Copy +  Into<usize> + TryFrom<usize>
     {
         let err_num = self.err_map.max() + 1;
         let mut r : ICSMexFull<S, TID, TPART> = ICSMexFull::new(self.id, err_num);
@@ -169,8 +174,10 @@ where
 mod test{
     use crate::err_map::bst::Bst;
     use crate::debug_check::*;
+    use core::ops::{SubAssign,AddAssign,Add,Sub};
     use core::sync::atomic;
     use core::sync::atomic::AtomicU8;
+    use core::time::Duration;
     use external::ICSDep;
     use ics_mex::ICSMex;
     use internal::InternalCheck;
@@ -183,9 +190,89 @@ mod test{
     const MEXSIZE : usize= 8;
     const STR: &str= "internal_check_test";
 
+    #[derive(Debug,Clone, Copy,PartialEq, Eq, PartialOrd, Ord,Hash)]
+    struct Instant{
+    }
+
+    impl Add<Duration> for Instant{
+        type Output = Instant;
+
+        fn add(self, rhs: Duration) -> Self::Output {
+            todo!()
+        }
+        // add code here
+    }
+
+    impl AddAssign<Duration> for Instant{
+        fn add_assign(&mut self, rhs: Duration) {
+            todo!()
+        }
+        // add code here
+    }
+
+    impl SubAssign<Duration> for Instant{
+        fn sub_assign(&mut self, rhs: Duration) {
+            todo!()
+        }
+        // add code here
+    }
+
+    impl Sub<Duration> for Instant{
+        type Output = Instant;
+
+        fn sub(self, rhs: Duration) -> Self::Output {
+            todo!()
+        }
+        // add code here
+    }
+
+    impl Sub for Instant{
+        type Output = Duration;
+
+        fn sub(self, rhs: Instant) -> Self::Output {
+            todo!()
+        }
+        // add code here
+    }
+
+
+    impl embedded_timers::instant::Instant for Instant{
+        fn checked_duration_since(&self, earlier: Self) -> Option<core::time::Duration> {
+            todo!()
+        }
+
+        fn checked_add(&self, duration: core::time::Duration) -> Option<Self> {
+            todo!()
+        }
+
+        fn checked_sub(&self, duration: core::time::Duration) -> Option<Self> {
+            todo!()
+        }
+    }
+
+    #[derive(Debug)]
+    struct Timer {
+    }
+
+    impl Timer {
+        pub fn new() -> Self {
+            Timer{}
+        }
+        
+    }
+
+    impl embedded_timers::clock::Clock for Timer{
+        type Instant = Instant;
+
+        fn now(&self) -> Self::Instant {
+            todo!()
+        }
+        // add code here
+    }
+
     #[test]
     fn create_ics() {
-        let mut ics : ICS<Bst,MEXSIZE,usize>= ICS::new(1).unwrap();
+        let mut ics : ICS<Bst,MEXSIZE,usize,Instant,Timer>= ICS::new(1,Timer::new()).unwrap();
         ics.internal_check();
         let res : ics_mex::ICSMexFull<8, usize, usize> = ics.create_ics_messages();
 
@@ -197,7 +284,7 @@ mod test{
 
     #[test]
     fn locate_internal_fail() {
-        let mut ics : ICS<Bst, MEXSIZE,usize> = ICS::new(12).unwrap();
+        let mut ics : ICS<Bst, MEXSIZE,usize,Instant,Timer> = ICS::new(12,Timer::new()).unwrap();
 
         let at_u8 = AtomicU8::new(12);
         let mut che_u8 :CheckU8<0, 15, 99, 0> = CheckU8::new(&at_u8);
@@ -217,7 +304,7 @@ mod test{
 
     #[test]
     fn locate_external_fail_spec_mex() {
-        let mut ics : ICS<Bst, MEXSIZE,usize> = ICS::new(12).unwrap();
+        let mut ics : ICS<Bst, MEXSIZE,usize,Instant,Timer> = ICS::new(12,Timer::new()).unwrap();
 
         let at_u8 = AtomicU8::new(12);
         let mut che_u8 :CheckU8<0, 15, 99, 0> = CheckU8::new(&at_u8);
@@ -237,7 +324,7 @@ mod test{
 
     #[test]
     fn locate_external_fail_general_mex() {
-        let mut ics : ICS<Bst, MEXSIZE,usize> = ICS::new(12).unwrap();
+        let mut ics : ICS<Bst, MEXSIZE,usize,Instant,Timer> = ICS::new(12,Timer::new()).unwrap();
 
         let at_u8 = AtomicU8::new(12);
         let mut che_u8 :CheckU8<0, 15, 99, 0> = CheckU8::new(&at_u8);

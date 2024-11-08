@@ -1,14 +1,11 @@
 use super::generic_check::{ErrStatus, GenericCheck, MexConseguence};
 use super::ics_mex::ICSMex;
-use num::Unsigned;
-use num::integer::Integer;
-
 
 #[allow(unused)]
 #[derive(Debug)]
 pub struct ICSDep<'a,const S: usize,TID>
 where 
-TID: Integer + Copy,
+TID: Copy + core::cmp::PartialEq,
 {
     description: &'a str,
     id: TID,
@@ -20,7 +17,7 @@ TID: Integer + Copy,
 
 impl<'a,const S :usize,TID> GenericCheck<'a> for ICSDep<'a,S,TID>
 where 
-TID: Integer + Copy,
+TID: Copy + core::cmp::PartialEq,
 {
     fn get_description(&'a self) -> &'a str{
         &self.description
@@ -34,7 +31,7 @@ TID: Integer + Copy,
 #[allow(unused)]
 impl<'a,const S:usize,TID> ICSDep<'a,S,TID>
 where 
-TID: Integer +  Copy,
+TID:  Copy + core::cmp::PartialEq,
 {
     pub fn new(
         description: &'a str,
@@ -56,7 +53,7 @@ TID: Integer +  Copy,
 
     pub fn check_mex<TPART>(&mut self, mex: &ICSMex<S,TID,TPART>) -> Result<ErrStatus,&str>
     where 
-        TPART: Copy + Unsigned +  Into<usize> + TryFrom<usize>
+        TPART: Copy +  Into<usize> + TryFrom<usize>
     {
         if  mex.same_id(self.id) {
             match (mex.check_error(self.error_idx),&self.status){
