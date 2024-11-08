@@ -8,7 +8,6 @@ use super::ics_trait::external::ICSDep;
 use super::ics_trait::ics_mex::ICSMex;
 
 use core::result;
-use num::{Integer,Unsigned};
 
 #[derive(Debug,Clone)]
 pub enum ErrorType {
@@ -28,7 +27,7 @@ pub struct ICSError<'a>{
 pub struct ICS<'a,M,const S:usize,TID> 
 where 
     M : ErrMap,
-    TID: Integer + Copy,
+    TID: Copy + core::cmp::PartialEq,
 {
     int_vec: Vec<(usize,InternalCheck<'a>)>,
     ext_vec: Vec<(usize,ICSDep<'a,S,TID>)>,
@@ -40,7 +39,7 @@ where
 impl<'a,M,const S: usize,TID> ICS<'a,M,S,TID> 
 where 
     M : ErrMap,
-    TID: Integer + Copy,
+    TID: Copy + core::cmp::PartialEq,
 {
     pub fn new(id:TID) -> Result<Self,&'a str> {
         Ok(Self {
@@ -103,7 +102,7 @@ where
 
     pub fn check_general_mex<TPART>(&mut self, mex: &ICSMex<S,TID,TPART>)
     where 
-        TPART: Copy + Unsigned +  Into<usize> + TryFrom<usize>
+        TPART: Copy +  Into<usize> + TryFrom<usize>
     {
         for (_,cond) in self.ext_vec.iter_mut() {
             cond.check_mex(mex);
@@ -113,7 +112,7 @@ where
 
     pub fn check_specific_mex<TPART>(&mut self,mex: &ICSMex<S,TID,TPART>, ext_err_index: usize) -> result::Result<(),&str>
     where 
-        TPART: Copy + Unsigned +  Into<usize> + TryFrom<usize>
+        TPART: Copy +  Into<usize> + TryFrom<usize>
     {
         if ext_err_index >= self.ext_vec.len() {
             return Err("invalid index range fir ext_vec")
@@ -142,7 +141,7 @@ where
 
     pub fn create_ics_messages<TPART>(&mut self) -> ICSMexFull<S,TID,TPART>
     where 
-        TPART: Copy + Unsigned +  Into<usize> + TryFrom<usize>
+        TPART: Copy +  Into<usize> + TryFrom<usize>
     {
         let err_num = self.err_map.max() + 1;
         let mut r : ICSMexFull<S, TID, TPART> = ICSMexFull::new(self.id, err_num);

@@ -8,5 +8,3 @@ edition = "2021"
 [dependencies]
 bit_ops = "0.1.13"
 embedded-can = "0.4.1"
-# can = "0.2.0"
-num = { version = "0.4", default-features = false }
