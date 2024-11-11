@@ -1,3 +1,4 @@
+use core::result;
 use alloc::vec::Vec;
 use crate::err_map::ErrMap;
 use crate::ics_trait::generic_check::ErrStatus;
@@ -7,7 +8,41 @@ use super::ics_trait::generic_check::GenericCheck;
 use super::ics_trait::external::ICSDep;
 use super::ics_trait::ics_mex::ICSMex;
 
-use core::result;
+pub trait ICSTemplate<'a,M,const S:usize>
+where 
+    M : ErrMap,
+    Self: Sized
+{
+    type TID : Copy + PartialEq;
+
+    fn new(id:Self::TID) -> Result<Self,&'a str>;
+
+    fn with_capacity(int_err_cap: usize, ext_err_cap: usize, error_cap: usize, id:Self::TID) -> Self;
+
+    fn full_spec(id:Self::TID, int_vec: Vec<(usize,InternalCheck<'a>)>, 
+    ext_vec: Vec<(usize,ICSDep<'a,S,Self::TID>)>) -> Self;
+
+    fn add_internal_check(&mut self, check: InternalCheck<'a>, err_index: usize)
+    -> Result<(), (usize, &str)>;
+
+    fn add_external_check(&mut self, check: ICSDep<'a,S,Self::TID>, err_index: usize) 
+    -> Result<(),(usize,&'a str)>;
+
+    fn internal_check(&mut self);
+
+    fn check_general_mex<TPART>(&mut self, mex: &ICSMex<S,Self::TID,TPART>)
+    where TPART: Into<usize> + Copy + From<usize>;
+
+    fn check_specific_mex<TPART>(&mut self,mex: &ICSMex<S,Self::TID,TPART>, ext_err_index: usize) 
+    -> result::Result<(),&str>
+    where TPART: Into<usize> + Copy + From<usize>;
+
+    fn get_err_info(&'a self,err_type: ErrorType, err_index: usize) -> Option<&str>;
+
+    fn create_ics_messages<TPART>(&mut self) -> ICSMexFull<S,Self::TID,TPART>
+    where TPART: Into<usize> + Copy + From<usize>;
+}
+
 
 #[derive(Debug,Clone)]
 pub enum ErrorType {
@@ -36,12 +71,14 @@ where
 }
 
 #[allow(unused)]
-impl<'a,M,const S: usize,TID> ICS<'a,M,S,TID> 
-where 
-    M : ErrMap,
-    TID: Copy + core::cmp::PartialEq,
+impl<'a,M,const S: usize,TID> ICSTemplate<'a,M,S> for ICS<'a,M,S ,TID>
+    where 
+        M : ErrMap,
+        TID: Copy + core::cmp::PartialEq,
 {
-    pub fn new(id:TID) -> Result<Self,&'a str> {
+    type TID = TID;
+    // add code here
+    fn new(id:TID) -> Result<Self,&'a str> {
         Ok(Self {
             int_vec: Vec::new(),
             ext_vec: Vec::new(),
@@ -50,7 +87,7 @@ where
         })
     }
 
-    pub fn with_capacity(
+    fn with_capacity(
         int_err_cap: usize, 
         ext_err_cap: usize, 
         error_cap: usize, 
@@ -61,7 +98,7 @@ where
         Self {int_vec: ie,ext_vec: ee, err_map: M::new(),id}
     }
 
-    pub fn full_spec(id:TID, int_vec: Vec<(usize,InternalCheck<'a>)>, 
+    fn full_spec(id:TID, int_vec: Vec<(usize,InternalCheck<'a>)>, 
         ext_vec: Vec<(usize,ICSDep<'a,S,TID>)>) -> Self
     {
         Self{
@@ -69,7 +106,7 @@ where
         }
     }
 
-    pub fn add_internal_check(&mut self, check: InternalCheck<'a>, err_index: usize)
+    fn add_internal_check(&mut self, check: InternalCheck<'a>, err_index: usize)
         -> Result<(), (usize, &str)>
     {
         match self.err_map.insert_err(err_index){
@@ -81,7 +118,7 @@ where
         }
     }
 
-    pub fn add_external_check(&mut self, check: ICSDep<'a,S,TID>, err_index: usize) 
+    fn add_external_check(&mut self, check: ICSDep<'a,S,TID>, err_index: usize) 
         -> Result<(),(usize,&'a str)>
     {
         match self.err_map.insert_err(err_index){
@@ -93,14 +130,14 @@ where
         }
     }
 
-    pub fn internal_check(&mut self) 
+    fn internal_check(&mut self) 
     {
         for (_,int_check) in &mut self.int_vec{
             int_check.run_check();
         }
     }
 
-    pub fn check_general_mex<TPART>(&mut self, mex: &ICSMex<S,TID,TPART>)
+    fn check_general_mex<TPART>(&mut self, mex: &ICSMex<S,TID,TPART>)
     where 
         TPART: Copy +  Into<usize> + TryFrom<usize>
     {
@@ -110,7 +147,7 @@ where
     }
 
 
-    pub fn check_specific_mex<TPART>(&mut self,mex: &ICSMex<S,TID,TPART>, ext_err_index: usize) -> result::Result<(),&str>
+    fn check_specific_mex<TPART>(&mut self,mex: &ICSMex<S,TID,TPART>, ext_err_index: usize) -> result::Result<(),&str>
     where 
         TPART: Copy +  Into<usize> + TryFrom<usize>
     {
@@ -123,7 +160,7 @@ where
         Ok(())
     }
 
-    pub fn get_err_info(&'a self,err_type: ErrorType, err_index: usize) -> Option<&str> 
+    fn get_err_info(&'a self,err_type: ErrorType, err_index: usize) -> Option<&str> 
     {
         fn get_dscr<'a,G: GenericCheck<'a>>(vc : &'a Vec<(usize,G)>, idx: usize) -> Option<&'a str>{
                 if idx < vc.len(){
@@ -139,7 +176,7 @@ where
         }
     }
 
-    pub fn create_ics_messages<TPART>(&mut self) -> ICSMexFull<S,TID,TPART>
+    fn create_ics_messages<TPART>(&mut self) -> ICSMexFull<S,TID,TPART>
     where 
         TPART: Copy +  Into<usize> + TryFrom<usize>
     {
@@ -166,6 +203,7 @@ where
 mod test{
     use crate::err_map::bst::Bst;
     use crate::debug_check::*;
+    use crate::ics::ICSTemplate;
     use core::sync::atomic;
     use core::sync::atomic::AtomicU8;
     use external::ICSDep;
