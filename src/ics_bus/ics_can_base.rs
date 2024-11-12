@@ -80,6 +80,10 @@ where
     where TPART: Into<usize> + Copy + From<usize> {
         todo!()
     }
+
+    fn get_id(&self) -> Self::TID {
+        todo!()
+    }
 }
 
 #[cfg(test)]
