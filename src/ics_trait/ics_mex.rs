@@ -32,6 +32,10 @@ TPART: Copy +  Into<usize> + TryFrom<usize>
         self.part
     }
 
+    pub fn data(&self) -> &[u8]{
+        &self.err_vec
+    }
+
     pub fn iter_data(&self) -> Iter<u8> 
     {
         self.err_vec.iter()
