@@ -1,5 +1,6 @@
 use core::result;
 use alloc::vec::Vec;
+use crate::err_map::bst::Bst;
 use crate::err_map::ErrMap;
 use crate::ics_trait::generic_check::ErrStatus;
 use crate::ics_trait::ics_mex::ICSMexFull;
@@ -8,12 +9,12 @@ use super::ics_trait::generic_check::GenericCheck;
 use super::ics_trait::external::ICSDep;
 use super::ics_trait::ics_mex::ICSMex;
 
-pub trait ICSTemplate<'a,M,const S:usize>
+pub trait ICSTemplate<'a,const S:usize>
 where 
-    M : ErrMap,
     Self: Sized
 {
     type TID : Copy + PartialEq;
+    type M : ErrMap;
 
     fn new(id:Self::TID) -> Result<Self,&'a str>;
 
@@ -71,12 +72,13 @@ where
 }
 
 #[allow(unused)]
-impl<'a,M,const S: usize,TID> ICSTemplate<'a,M,S> for ICS<'a,M,S ,TID>
+impl<'a,M,const S: usize,TID> ICSTemplate<'a,S> for ICS<'a,M,S ,TID>
     where 
         M : ErrMap,
         TID: Copy + core::cmp::PartialEq,
 {
     type TID = TID;
+    type M = Bst;
     // add code here
     fn new(id:TID) -> Result<Self,&'a str> {
         Ok(Self {

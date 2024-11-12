@@ -25,13 +25,14 @@ where
 }
 
 #[allow(unused)]
-impl<'a,M,F> ICSTemplate<'a,M,ICS_PAYLOAD_SIZE> for ICSCanBase<'a,M,F>
+impl<'a,M,F> ICSTemplate<'a,ICS_PAYLOAD_SIZE> for ICSCanBase<'a,M,F>
 where
     M : ErrMap,
     Self: Sized,
     F: Frame,
 {
     type TID = u8;
+    type M = M;
 
     fn new(id:Self::TID) -> Result<Self,&'a str>{
         todo!()
