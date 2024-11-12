@@ -42,6 +42,8 @@ where
 
     fn create_ics_messages<TPART>(&mut self) -> ICSMexFull<S,Self::TID,TPART>
     where TPART: Into<usize> + Copy + From<usize>;
+
+    fn get_id(&self) -> Self::TID;
 }
 
 
@@ -197,6 +199,10 @@ impl<'a,M,const S: usize,TID> ICSTemplate<'a,S> for ICS<'a,M,S ,TID>
         }
 
         r
+    }
+
+    fn get_id(&self) -> Self::TID {
+        self.id
     }
 }
 
