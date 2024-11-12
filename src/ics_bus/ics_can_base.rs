@@ -77,7 +77,7 @@ where
     }
 
     fn create_ics_messages<TPART>(&mut self) -> ICSMexFull<ICS_PAYLOAD_SIZE,Self::TID,TPART>
-    where TPART: Into<usize> + Copy + From<usize> {
+    where TPART: Into<usize> + Copy + TryFrom<usize> {
         todo!()
     }
 

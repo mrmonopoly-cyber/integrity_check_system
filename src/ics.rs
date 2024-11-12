@@ -41,7 +41,7 @@ where
     fn get_err_info(&'a self,err_type: ErrorType, err_index: usize) -> Option<&str>;
 
     fn create_ics_messages<TPART>(&mut self) -> ICSMexFull<S,Self::TID,TPART>
-    where TPART: Into<usize> + Copy + From<usize>;
+    where TPART: Into<usize> + Copy + TryFrom<usize>;
 
     fn get_id(&self) -> Self::TID;
 }
